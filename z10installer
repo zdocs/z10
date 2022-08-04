@@ -1,0 +1,269 @@
+#!/bin/bash
+
+# Argbash - see https://argbash.io for more info
+die() {
+	local _ret="${2:-1}"
+	test "${_PRINT_HELP:-no}" = yes && print_help >&2
+	echo "$1" >&2
+	exit "${_ret}"
+}
+
+u=`id -un`
+if [ x$u != "xroot" ]; then
+    echo "Error: must be run as root user"
+    exit 1
+fi
+
+# Get Ubuntu Version
+version=$(lsb_release -d | awk -F" " '{print $3}' | cut -c 1-5)
+if [[ x$version == "x20.04" || x$version == "x18.04" ]]; then
+   echo "Ubuntu $version is supported"
+else
+   echo "Ubuntu $version is not supported!"
+   exit 1
+fi
+
+print_help() {
+    printf '%s\n'
+    printf '%s\n' "Install and configure Zimbra 10.0 ..."
+    printf 'Usage: %s [-p|--password <arg>] [-t|--timezone <arg>] [-l|--letsencypt <arg>] [-h|--help] <domain>\n' "$(basename $0)"
+    printf '\t%s\n' "<domain>: Domain to install Zimbra for"
+    printf '\t%s\n' "-p, --password: Admin password to use (no default)"
+    printf '\t%s\n' "-n, --hostname: Hostname to use for the server (default: mail)"
+    printf '\t%s\n' "-t, --timezone: Timezone to set the server to user (optional) (default: 'Singapore')"
+    printf '\t%s\n' "-l, --letsencypt: Use Let's Encrypt for providing TLS certificates (optional y/n) (default: 'n')"
+    printf '\t%s\n' "-a, --apache: Add support for spell check and convertd (optional y/n) (default: 'n')"
+    printf '\t%s\n' "-h, --help: Prints help"
+    printf '%s\n'
+    printf '%s\n' "Usage: $(basename $0) [-p mypassword] [-t 'TimeZone'] [-n Server-Name] [-l y] Domain-Name"
+    printf '%s\n' "Example: $(basename $0) -n zmail -l y myorg.com"
+    exit 1
+}
+
+parse_commandline() {
+    _positionals_count=0
+    while test $# -gt 0; do
+        _key="$1"
+        case "$_key" in
+            -p|--password)
+                test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+                _arg_password="$2"
+                shift
+                ;;
+            --password=*)
+                _arg_password="${_key##--password=}"
+                ;;
+            -p*)
+                _arg_password="${_key##-p}"
+                ;;
+            -n|--hostname)
+                test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+                _arg_hostname="$2"
+                shift
+                ;;
+            --hostname=*)
+                _arg_hostname="${_key##--hostname=}"
+                ;;
+            -n)
+                _arg_hostname="${_key##-t}"
+                ;;
+            -t|--timezone)
+                test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+                _arg_timezone="$2"
+                shift
+                ;;
+            --timezone=*)
+                _arg_timezone="${_key##--timezone=}"
+                ;;
+            -t*)
+                _arg_timezone="${_key##-t}"
+                ;;
+            -a|--apache)
+                test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+                _arg_apace="$2"
+                shift
+                ;;
+            --apache=*)
+                _arg_apache="${_key##--timezone=}"
+                ;;
+            -a*)
+                _arg_apache="${_key##-t}"
+                ;;
+            -l|--letsencrypt)
+                test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+                _arg_letsencrypt="$2"
+                shift
+                ;;
+            --letsencrypt=*)
+                _arg_letsencrypt="${_key##--letsencrypt=}"
+                ;;
+            -l*)
+                _arg_letsencrypt="${_key##-l}"
+                ;;
+            -h|--help)
+                print_help
+                exit 0
+                ;;
+            -h*)
+                print_help
+                exit 0
+                ;;
+            *)
+                _last_positional="$1"
+                _positionals+=("$_last_positional")
+                _positionals_count=$((_positionals_count + 1))
+                ;;
+        esac
+        shift
+    done
+}
+
+handle_passed_args_count() {
+	local _required_args_string="'domain'"
+	test "${_positionals_count}" -ge 1 || _PRINT_HELP=yes die "FATAL ERROR: Not enough positional arguments - we require exactly 1 (namely: $_required_args_string), but got only ${_positionals_count}." 1
+	test "${_positionals_count}" -le 1 || _PRINT_HELP=yes die "FATAL ERROR: There were spurious positional arguments --- we expect exactly 1 (namely: $_required_args_string), but got ${_positionals_count} (the last one was: '${_last_positional}')." 1
+}
+
+assign_positional_args() {
+	local _positional_name _shift_for=$1
+	_positional_names="_arg_domain "
+
+	shift "$_shift_for"
+	for _positional_name in ${_positional_names}
+	do
+		test $# -gt 0 || break
+		eval "$_positional_name=\${1}" || die "Error during argument parsing, possibly an Argbash bug." 1
+		shift
+	done
+}
+
+parse_commandline "$@"
+handle_passed_args_count
+assign_positional_args 1 "${_positionals[@]}"
+
+MYIP=$(hostname -I | cut -f1 -d" " | tr -d '[:space:]')
+DOMAIN="$_arg_domain"
+HOSTNAME="${_arg_hostname:="mail"}"."$DOMAIN"
+TIMEZONE="${_arg_timezone:-"Asia/Singapore"}"
+LETSENCRYPT="${_arg_letsencrypt:-"n"}"
+APACHE="${_arg_apache:-"n"}"
+MYPASSWORD="${_arg_password:-$(openssl rand -base64 9)}"
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+. ./util/utilfunc.sh
+
+updateSystemPackages
+installDNS
+fixFirewall
+pingLicenseServer
+resetHostName
+resetTimeDate
+configCert
+
+
+#other updates
+DEBIAN_FRONTEND=noninteractive apt install -y locales
+locale-gen "en_US.UTF-8"
+update-locale LC_ALL="en_US.UTF-8"
+apt-get -qq update
+
+#Preparing the config files to inject
+if [ ! -d "/tmp/zcs" ]; then
+    mkdir /tmp/zcs
+else
+    rm -rf tmp/zcs/*    #Dangerous Command
+fi
+
+#Download binaries
+#echo "Downloading Zimbra 10 for Ubuntu $version ..."
+#if [[ "$version" == "20.04" ]]; then
+#    wget -O /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU20_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta1/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU20_64.20220706123001.tgz' > /dev/null 2>&1
+#elif [[ "$version" == "18.04" ]]; then
+#    wget -) /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta1/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz' > /dev/null 2>&1
+#fi
+#echo -e "${GREEN}... Done.${NC}"
+
+echo "Extracting the files ..."
+cd /tmp/zcs && tar xzf /tmp/zcs-NETWORK-10.0.0_BETA_4384.UBUNTU20_64.20220803200001.tgz
+
+echo "Creating the auto-install input files ..."
+case $COMPONENT in
+  allinone)
+    cat 10-All-in-One >/tmp/zcs/zconfig
+    if [[ "$APACHE" == "y" ]]; then
+        echo 'INSTALL_PACKAGES="zimbra-core zimbra-ldap zimbra-logger zimbra-mta zimbra-snmp zimbra-store zimbra-apache zimbra-spell zimbra-convertd zimbra-memcached zimbra-proxy zimbra-onlyoffice"' >>/tmp/zcs/zconfig
+    else 
+        echo 'INSTALL_PACKAGES="zimbra-core zimbra-ldap zimbra-logger zimbra-mta zimbra-store zimbra-convertd zimbra-memcached zimbra-proxy zimbra-onlyoffice"' >>/tmp/zcs/zconfig
+    fi
+    cat <<EOF >/tmp/zcs/zkeys
+y
+y
+y
+y
+y
+n
+n
+y
+$APACHE
+$APACE
+y
+y
+y
+y
+y
+y
+EOF
+    ;;
+
+  ldap)
+    cat 10-LDAP-Config >/tmp/zcs/zconfig
+    cat 10-LDAP-Answers >/tmp/zcs/zkeys
+    ;;
+
+  mbs)
+    echo -n "Mail Store"
+    ;;
+
+  mtaproxy)
+    echo -n "Mail Store"
+    ;;
+
+  *)
+    echo -n "unknown value - check the component being installed!"
+    exit 1
+    ;;
+esac
+
+getLicense
+
+D=`date +%s`
+echo "Installing the Zimbra binaries ..."
+echo -e "For more details you can open a new terminal and run ${GREEN}tail -f /tmp/install.log.*${NC}."
+cd /tmp/zcs/zcs-* && ./install.sh -l /tmp/zcs/ZCSLicense.xml -s < /tmp/zcs/zkeys >> /tmp/zcs/install-$D.log 2>&1
+echo -e "${GREEN}... Done.${NC}"
+
+echo "Setting up your Zimbra configuration, this can take up to 20 minutes or slightly more."
+echo -e "For more details you can open a new terminal and run tail -f ${GREEN}/tmp/zmsetup.log${NC}."
+/opt/zimbra/libexec/zmsetup.pl -c /tmp/zcs/zconfig >> /tmp/zcs/install-$D.log 2>&1
+echo "Allow mailbox service to start ..."
+for i in {15..0}; do echo -ne "${RED}$i${NC}\033[0K\r"; sleep 1; done; echo
+echo "Activating license ..."
+su - zimbra -c "zmlicense -a"
+echo -e "${GREEN}... Done.${NC}"
+
+postInstallCert
+postInstallZimbra
+
+su - zimbra -c '/opt/zimbra/bin/zmcontrol restart'
+
+echo
+echo
+echo "Zimbra installation details:"
+echo
+echo "  - Webmail Login:  https://${HOSTNAME}"
+echo "  - Admin Console:  https://${HOSTNAME}:9071"
+echo "  - Admin Username: admin"
+echo "  - Admin Password: ${MYPASSWORD}"
+echo ""
