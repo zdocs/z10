@@ -232,35 +232,34 @@ postInstallZimbra() {
     ZIMBRAIP=$(netstat -tulpn | grep slapd | awk '{print $4}' | awk -F ':' '{print $1}')
 
     cat >> /tmp/provfile << EOF
-    mcf zimbraPublicServiceProtocol https
-    mcf zimbraPublicServicePort 443
-    mcf zimbraPublicServiceHostname $HOSTNAME
-    mcf zimbraReverseProxySSLProtocols TLSv1.2
-    mcf +zimbraReverseProxySSLProtocols TLSv1.3
-    mcf zimbraReverseProxySSLCiphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384'
+mcf zimbraPublicServiceProtocol https
+mcf zimbraPublicServicePort 443
+mcf zimbraPublicServiceHostname $HOSTNAME
+mcf zimbraReverseProxySSLProtocols TLSv1.2
+mcf +zimbraReverseProxySSLProtocols TLSv1.3
+mcf zimbraReverseProxySSLCiphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384'
 
-    mcf +zimbraResponseHeader "Strict-Transport-Security: max-age=31536000; includeSubDomains"
-    mcf +zimbraResponseHeader "X-Content-Type-Options: nosniff"
-    mcf +zimbraResponseHeader "X-Robots-Tag: noindex"
-    mcf zimbraMailKeepOutWebCrawlers TRUE
+mcf +zimbraResponseHeader "Strict-Transport-Security: max-age=31536000; includeSubDomains"
+mcf +zimbraResponseHeader "X-Content-Type-Options: nosniff"
+mcf +zimbraResponseHeader "X-Robots-Tag: noindex"
+mcf zimbraMailKeepOutWebCrawlers TRUE
 
-    mcf zimbraSSLDHParam /etc/ffdhe4096.pem
+mcf zimbraSSLDHParam /etc/ffdhe4096.pem
 
-    mcf zimbraMtaSmtpdTlsCiphers medium
-    mcf zimbraMtaSmtpdTlsMandatoryCiphers  medium
-    mcf zimbraMtaSmtpdTlsProtocols '>=TLSv1.2'
-    mcf zimbraMtaTlsSecurityLevel may
+mcf zimbraMtaSmtpdTlsCiphers medium
+mcf zimbraMtaSmtpdTlsMandatoryCiphers  medium
+mcf zimbraMtaSmtpdTlsProtocols '>=TLSv1.2'
+mcf zimbraMtaTlsSecurityLevel may
 
-    ms $HOSTNAME zimbraPop3CleartextLoginEnabled FALSE
-    ms $HOSTNAME zimbraImapCleartextLoginEnabled FALSE
+ms $HOSTNAME zimbraPop3CleartextLoginEnabled FALSE
+ms $HOSTNAME zimbraImapCleartextLoginEnabled FALSE
 
-    mcf zimbraLastLogonTimestampFrequency 1s
-    mc default zimbraPrefShortEmailAddress FALSE
+mcf zimbraLastLogonTimestampFrequency 1s
+mc default zimbraPrefShortEmailAddress FALSE
 
-    mcf +zimbraMailTrustedIP 127.0.0.1
-    mcf +zimbraMailTrustedIP $ZIMBRAIP
-
-    EOF
+mcf +zimbraMailTrustedIP 127.0.0.1
+mcf +zimbraMailTrustedIP $ZIMBRAIP
+EOF
 
     sed -i 's/-server -Dhttps.protocols=TLSv1.2 -Djdk.tls.client.protocols=TLSv1.2/-server -Dhttps.protocols=TLSv1.2,TLSv1.3 -Djdk.tls.client.protocols=TLSv1.2,TLSv1.3/g' /opt/zimbra/conf/localconfig.xml
     wget https://raw.githubusercontent.com/internetstandards/dhe_groups/master/ffdhe4096.pem -O /etc/ffdhe4096.pem
@@ -286,4 +285,21 @@ postInstallZimbra() {
     su - zimbra -c "/opt/zimbra/libexec/zmproxyconfig -e -w -C -H $HOSTNAME"
 }
 
+miscConfig() {
+    #other updates
+    DEBIAN_FRONTEND=noninteractive apt install -y locales
+    locale-gen "en_US.UTF-8"
+    update-locale LC_ALL="en_US.UTF-8"
+    apt-get -qq update
+}
 
+downloadBinaries() {
+    #Download binaries
+    echo "Downloading Zimbra 10 for Ubuntu $version ..."
+    #if [[ "$version" == "20.04" ]]; then
+    #    wget -O /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU20_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta1/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU20_64.20220706123001.tgz' > /dev/null 2>&1
+    #elif [[ "$version" == "18.04" ]]; then
+    #    wget -) /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta1/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz' > /dev/null 2>&1
+    #fi
+    #echo -e "${GREEN}... Done.${NC}"
+}

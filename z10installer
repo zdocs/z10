@@ -17,7 +17,7 @@ fi
 # Get Ubuntu Version
 version=$(lsb_release -d | awk -F" " '{print $3}' | cut -c 1-5)
 if [[ x$version == "x20.04" || x$version == "x18.04" ]]; then
-   echo "Ubuntu $version is supported"
+   echo "Ubuntu $version is supported."
 else
    echo "Ubuntu $version is not supported!"
    exit 1
@@ -26,8 +26,9 @@ fi
 print_help() {
     printf '%s\n'
     printf '%s\n' "Install and configure Zimbra 10.0 ..."
-    printf 'Usage: %s [-p|--password <arg>] [-t|--timezone <arg>] [-l|--letsencypt <arg>] [-h|--help] <domain>\n' "$(basename $0)"
+    printf 'Usage: %s [-c|--component <arg>] [-p|--password <arg>] [-t|--timezone <arg>] [-l|--letsencypt <arg>] [-h|--help] <domain>\n' "$(basename $0)"
     printf '\t%s\n' "<domain>: Domain to install Zimbra for"
+    printf '\t%s\n' "-c, --component: Mandatory Component to install (ldap|mailstore|mtaproxy)"
     printf '\t%s\n' "-p, --password: Admin password to use (no default)"
     printf '\t%s\n' "-n, --hostname: Hostname to use for the server (default: mail)"
     printf '\t%s\n' "-t, --timezone: Timezone to set the server to user (optional) (default: 'Singapore')"
@@ -35,8 +36,8 @@ print_help() {
     printf '\t%s\n' "-a, --apache: Add support for spell check and convertd (optional y/n) (default: 'n')"
     printf '\t%s\n' "-h, --help: Prints help"
     printf '%s\n'
-    printf '%s\n' "Usage: $(basename $0) [-p mypassword] [-t 'TimeZone'] [-n Server-Name] [-l y] Domain-Name"
-    printf '%s\n' "Example: $(basename $0) -n zmail -l y myorg.com"
+    printf '%s\n' "Usage: $(basename $0) [-c ldap] [-p mypassword] [-t 'TimeZone'] [-n Server-Name] [-l y] Domain-Name"
+    printf '%s\n' "Example: $(basename $0) -c ldap -n zmail -l y myorg.com"
     exit 1
 }
 
@@ -154,20 +155,14 @@ NC='\033[0m' # No Color
 
 . ./util/utilfunc.sh
 
-updateSystemPackages
-installDNS
-fixFirewall
-pingLicenseServer
-resetHostName
-resetTimeDate
-configCert
-
-
-#other updates
-DEBIAN_FRONTEND=noninteractive apt install -y locales
-locale-gen "en_US.UTF-8"
-update-locale LC_ALL="en_US.UTF-8"
-apt-get -qq update
+#updateSystemPackages
+#installDNS
+#fixFirewall
+#pingLicenseServer
+#resetHostName
+#resetTimeDate
+#configCert
+#miscConfig
 
 #Preparing the config files to inject
 if [ ! -d "/tmp/zcs" ]; then
@@ -176,17 +171,10 @@ else
     rm -rf tmp/zcs/*    #Dangerous Command
 fi
 
-#Download binaries
-#echo "Downloading Zimbra 10 for Ubuntu $version ..."
-#if [[ "$version" == "20.04" ]]; then
-#    wget -O /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU20_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta1/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU20_64.20220706123001.tgz' > /dev/null 2>&1
-#elif [[ "$version" == "18.04" ]]; then
-#    wget -) /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta1/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz' > /dev/null 2>&1
-#fi
-#echo -e "${GREEN}... Done.${NC}"
+#downloadBinaries
 
 echo "Extracting the files ..."
-cd /tmp/zcs && tar xzf /tmp/zcs-NETWORK-10.0.0_BETA_4384.UBUNTU20_64.20220803200001.tgz
+cd /tmp/zcs #&& tar xzf /tmp/zcs-NETWORK-10.0.0_BETA_4384.UBUNTU20_64.20220803200001.tgz
 
 echo "Creating the auto-install input files ..."
 case $COMPONENT in
@@ -207,7 +195,7 @@ n
 n
 y
 $APACHE
-$APACE
+$APACHE
 y
 y
 y
@@ -223,11 +211,15 @@ EOF
     ;;
 
   mbs)
-    echo -n "Mail Store"
+    cat 10-MBS-Config >/tmp/zcs/zconfig
+    cat 10-MBS-Answers >/tmp/zcs/zkeys
+
     ;;
 
   mtaproxy)
-    echo -n "Mail Store"
+    cat 10-MTAProxy-Config >/tmp/zcs/zconfig
+    cat 10-MTAProxy-Answers >/tmp/zcs/zkeys
+
     ;;
 
   *)
@@ -236,6 +228,7 @@ EOF
     ;;
 esac
 
+exit 1
 getLicense
 
 D=`date +%s`
