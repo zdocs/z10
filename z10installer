@@ -31,14 +31,14 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-#updateSystemPackages
-#installDNS
-#fixFirewall
-#pingLicenseServer
-#resetHostName
-#resetTimeDate
-#configCert
-#miscConfig
+updateSystemPackages
+installDNS
+fixFirewall
+pingLicenseServer
+resetHostName
+resetTimeDate
+configCert
+miscConfig
 
 #Preparing the working directory
 if [ ! -d "/tmp/zcs" ]; then
