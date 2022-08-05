@@ -50,7 +50,7 @@ fi
 downloadBinaries
 
 echo "Extracting the files ..."
-cd /tmp/zcs #&& tar xzf /tmp/zcs-NETWORK-10.0.0_GA_1172.UBUNTU18_64.20220804101254.tgz
+cd /tmp/zcs && tar xzf /tmp/zcs-NETWORK-10.0.0_GA_1172.UBUNTU18_64.20220804101254.tgz
 
 echo "Creating the auto-install input files ..."
 createConfig
