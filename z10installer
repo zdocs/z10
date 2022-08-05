@@ -22,6 +22,16 @@ fi
 MYIP=$(hostname -I | cut -f1 -d" " | tr -d '[:space:]')
 DOMAIN="$_arg_domain"
 COMPONENT="$_arg_component"
+if [[ "$COMPONENT" == *"mbs"* ]]; then
+  cIN=(${COMPONENT// / })
+  if [[ ${#cIN[@]} !eq 3 ]]; then
+    echo -e "${RED} MBS needs addional LDAP parameters!!${NC}"
+    exit 1
+  fi
+  COMPONENT=${cIN[0]}
+  LDAPHOSTNAME==${cIN[1]}
+  LDAPPASSWORD==${cIN[2]}
+fi
 HOSTNAME="${_arg_hostname:="mail"}"."$DOMAIN"
 TIMEZONE="${_arg_timezone:-"Asia/Singapore"}"
 LETSENCRYPT="${_arg_letsencrypt:-"n"}"
