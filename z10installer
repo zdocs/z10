@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#TODO
+# Get all the local IP/hostname in a multi-server environment!!
+
 mydir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || { echo "Couldn't determine the script's running directory, which probably matters, bailing out" >&2; exit 2; }
 . "$mydir/utilfunc.sh"  # '.' means 'source'
 . "$mydir/argparser.sh"

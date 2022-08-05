@@ -148,7 +148,15 @@ resetHostName() {
     # Reset the hosts file
     echo "Rewriting the /etc/hosts file ..."
     mv /etc/hosts /etc/hosts.old
-    printf '127.0.0.1\tlocalhost.localdomain\tlocalhost\n127.0.1.1\tubuntu\n'$MYIP'\t'$HOSTNAME'\t${_arg_hostname:="mail"}\t' | tee -a /etc/hosts >/dev/null 2>&1
+    if [[ $COMPONENT == "allinone" ]]; then
+        printf '127.0.0.1\tlocalhost.localdomain\tlocalhost\n127.0.1.1\tubuntu\n'$MYIP'\t'$HOSTNAME'\t${_arg_hostname:="mail"}\t' | tee -a /etc/hosts >/dev/null 2>&1
+    else
+        printf '127.0.0.1\tlocalhost.localdomain\tlocalhost\n' | tee -a /etc/hosts >/dev/null 2>&1
+        printf '127.0.1.1\tubuntu\n' | tee -a /etc/hosts >/dev/null 2>&1
+        printf $MBSIP'\t'$MBSHOSTNAME'\t${_arg_hostname:="mail"}\n' | tee -a /etc/hosts >/dev/null 2>&1
+        printf $LDAPIP'\t'$LDAPHOSTNAME'\tldap' | tee -a /etc/hosts >/dev/null 2>&1
+        printf $MTAPROXYIP'\t'$MTAPROXYNAME'\tldap' | tee -a /etc/hosts >/dev/null 2>&1
+    fi
     echo -e "${GREEN}... Done.${NC}"
     echo "Setting hostname ($HOSTNAME) ..."
     hostnamectl set-hostname $HOSTNAME >/dev/null 2>&1
