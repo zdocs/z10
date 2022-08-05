@@ -41,14 +41,14 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-updateSystemPackages
-installDNS
-fixFirewall
-pingLicenseServer
-resetHostName
-resetTimeDate
-configCert
-miscConfig
+#updateSystemPackages
+#installDNS
+#fixFirewall
+#pingLicenseServer
+#resetHostName
+#resetTimeDate
+#configCert
+#miscConfig
 
 #Preparing the working directory
 if [ ! -d "/tmp/zcs" ]; then
@@ -60,12 +60,12 @@ fi
 downloadBinaries
 
 echo "Extracting the files ..."
-cd /tmp/zcs && tar xzf /tmp/zcs-NETWORK-10.0.0_GA_1172.UBUNTU18_64.20220804101254.tgz
+#cd /tmp/zcs && tar xzf /tmp/zcs-NETWORK-10.0.0_GA_1172.UBUNTU18_64.20220804101254.tgz
 
 echo "Creating the auto-install input files ..."
 createConfig
-getLicense
-
+#getLicense
+exit 1
 D=`date +%s`
 echo "Installing the Zimbra binaries ..."
 echo -e "For more details you can open a new terminal and run ${GREEN}tail -f /tmp/install.log.*${NC}."
