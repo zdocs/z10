@@ -24,13 +24,18 @@ DOMAIN="$_arg_domain"
 COMPONENT="$_arg_component"
 if [[ "$COMPONENT" == *"mbs"* ]]; then
   cIN=(${COMPONENT// / })
-  if [[ ${#cIN[@]} -ne 3 ]]; then # MBS Needs
-    echo -e "${RED} MBS needs addional parameters - LDAP Hostname and LDAP Password!!${NC}"
+  if [[ ${#cIN[@]} -ne 4 ]]; then # MBS Needs
+    echo -e "${RED} MBS needs addional parameters - LDAP Internal IP, LDAP Hostname and LDAP Password!!${NC}"
     exit 1
   fi
   COMPONENT=${cIN[0]}
-  LDAPHOSTNAME==${cIN[1]}
-  LDAPPASSWORD==${cIN[2]}
+  LDAPIP=${cIN[1]}
+  LDAPHOSTNAME=${cIN[2]}
+  LDAPPASSWORD=${cIN[3]}
+  LDAPSEARCH=$(ldapsearch -x -LLL -h $LDAPIP -D "uid=zimbra,cn=admins,cn=zimbra" -w LDAPPASSWORD "(mail=admin*)" dn)
+  if [[ $$LDAPSEARCH != *"uid=admin"* ]]
+    echo -e "${RED} Cannot connect to the ldap server .. Check firewall and your credentials!!${NC}"
+    exit 1
 fi
 HOSTNAME="${_arg_hostname:="mail"}"."$DOMAIN"
 TIMEZONE="${_arg_timezone:-"Asia/Singapore"}"
