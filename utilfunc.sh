@@ -358,7 +358,7 @@ EOF
         sed -i 's|"admin@$DOMAIN"|"admin@'${DOMAIN}'"|g' "$mydir/10-MBS-Config"
         sed -i 's|"$DOMAIN"|"'${DOMAIN}'"|g' "$mydir/10-MBS-Config"
         sed -i 's|"$MYPASSWORD"|"'${LDAPPASSWORD}'"|g' "$mydir/10-MBS-Config"
-        sed -i 's|"$LDAPHOSTNAME"|"'${ldap}'"|g' "$mydir/10-MBS-Config"
+        sed -i 's|"$LDAPHOSTNAME"|"'${LDAPHOSTNAME}'"|g' "$mydir/10-MBS-Config"
         memory=$(($(grep MemAvailable /proc/meminfo | awk '{print $2}')/1024/1024))
         sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-MBS-Config"
         #LDAPSERVERID
