@@ -55,6 +55,14 @@ cd /tmp/zcs #&& tar xzf /tmp/zcs-NETWORK-10.0.0_GA_1172.UBUNTU18_64.202208041012
 echo "Creating the auto-install input files ..."
 case $COMPONENT in
   allinone)
+    sed -i 's|"$HOSTNAME"|"'${HOSTNAME}'"|g' "$mydir/10-All-in-One"
+    sed -i 's|"admin@$DOMAIN"|"admin@'${DOMAIN}'"|g' "$mydir/10-All-in-One"
+    sed -i 's|"$DOMAIN"|"'${DOMAIN}'"|g' "$mydir/10-All-in-One"
+    sed -i 's|"$MYPASSWORD"|"'${MYPASSWORD}'"|g' "$mydir/10-All-in-One"
+    sed -i 's|"$TIMEZONE"|"'${TIMEZONE}'"|g' "$mydir/10-All-in-One"
+    memory=$(($(grep MemAvailable /proc/meminfo | awk '{print $2}')/1024/1024))
+    sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-All-in-One"
+
     cat "$mydir/10-All-in-One" >/tmp/zcs/zconfig
     if [[ "$APACHE" == "y" ]]; then
         echo 'INSTALL_PACKAGES="zimbra-core zimbra-ldap zimbra-logger zimbra-mta zimbra-snmp zimbra-store zimbra-apache zimbra-spell zimbra-convertd zimbra-memcached zimbra-proxy zimbra-onlyoffice"' >>/tmp/zcs/zconfig
