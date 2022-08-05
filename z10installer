@@ -1,12 +1,8 @@
 #!/bin/bash
 
-# Argbash - see https://argbash.io for more info
-die() {
-	local _ret="${2:-1}"
-	test "${_PRINT_HELP:-no}" = yes && print_help >&2
-	echo "$1" >&2
-	exit "${_ret}"
-}
+mydir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || { echo "Couldn't determine the script's running directory, which probably matters, bailing out" >&2; exit 2; }
+. "$mydir/utilfunc.sh"  # '.' means 'source'
+. "$mydir/argparser.sh"
 
 u=`id -un`
 if [ x$u != "xroot" ]; then
@@ -23,127 +19,9 @@ else
    exit 1
 fi
 
-print_help() {
-    printf '%s\n'
-    printf '%s\n' "Install and configure Zimbra 10.0 ..."
-    printf 'Usage: %s [-c|--component <arg>] [-p|--password <arg>] [-t|--timezone <arg>] [-l|--letsencypt <arg>] [-h|--help] <domain>\n' "$(basename $0)"
-    printf '\t%s\n' "<domain>: Domain to install Zimbra for"
-    printf '\t%s\n' "-c, --component: Mandatory Component to install (ldap|mailstore|mtaproxy)"
-    printf '\t%s\n' "-p, --password: Admin password to use (no default)"
-    printf '\t%s\n' "-n, --hostname: Hostname to use for the server (default: mail)"
-    printf '\t%s\n' "-t, --timezone: Timezone to set the server to user (optional) (default: 'Singapore')"
-    printf '\t%s\n' "-l, --letsencypt: Use Let's Encrypt for providing TLS certificates (optional y/n) (default: 'n')"
-    printf '\t%s\n' "-a, --apache: Add support for spell check and convertd (optional y/n) (default: 'n')"
-    printf '\t%s\n' "-h, --help: Prints help"
-    printf '%s\n'
-    printf '%s\n' "Usage: $(basename $0) [-c ldap] [-p mypassword] [-t 'TimeZone'] [-n Server-Name] [-l y] Domain-Name"
-    printf '%s\n' "Example: $(basename $0) -c ldap -n zmail -l y myorg.com"
-    exit 1
-}
-
-parse_commandline() {
-    _positionals_count=0
-    while test $# -gt 0; do
-        _key="$1"
-        case "$_key" in
-            -p|--password)
-                test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
-                _arg_password="$2"
-                shift
-                ;;
-            --password=*)
-                _arg_password="${_key##--password=}"
-                ;;
-            -p*)
-                _arg_password="${_key##-p}"
-                ;;
-            -n|--hostname)
-                test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
-                _arg_hostname="$2"
-                shift
-                ;;
-            --hostname=*)
-                _arg_hostname="${_key##--hostname=}"
-                ;;
-            -n)
-                _arg_hostname="${_key##-t}"
-                ;;
-            -t|--timezone)
-                test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
-                _arg_timezone="$2"
-                shift
-                ;;
-            --timezone=*)
-                _arg_timezone="${_key##--timezone=}"
-                ;;
-            -t*)
-                _arg_timezone="${_key##-t}"
-                ;;
-            -a|--apache)
-                test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
-                _arg_apace="$2"
-                shift
-                ;;
-            --apache=*)
-                _arg_apache="${_key##--timezone=}"
-                ;;
-            -a*)
-                _arg_apache="${_key##-t}"
-                ;;
-            -l|--letsencrypt)
-                test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
-                _arg_letsencrypt="$2"
-                shift
-                ;;
-            --letsencrypt=*)
-                _arg_letsencrypt="${_key##--letsencrypt=}"
-                ;;
-            -l*)
-                _arg_letsencrypt="${_key##-l}"
-                ;;
-            -h|--help)
-                print_help
-                exit 0
-                ;;
-            -h*)
-                print_help
-                exit 0
-                ;;
-            *)
-                _last_positional="$1"
-                _positionals+=("$_last_positional")
-                _positionals_count=$((_positionals_count + 1))
-                ;;
-        esac
-        shift
-    done
-}
-
-handle_passed_args_count() {
-	local _required_args_string="'domain'"
-	test "${_positionals_count}" -ge 1 || _PRINT_HELP=yes die "FATAL ERROR: Not enough positional arguments - we require exactly 1 (namely: $_required_args_string), but got only ${_positionals_count}." 1
-	test "${_positionals_count}" -le 1 || _PRINT_HELP=yes die "FATAL ERROR: There were spurious positional arguments --- we expect exactly 1 (namely: $_required_args_string), but got ${_positionals_count} (the last one was: '${_last_positional}')." 1
-}
-
-assign_positional_args() {
-	local _positional_name _shift_for=$1
-	_positional_names="_arg_domain "
-
-	shift "$_shift_for"
-	for _positional_name in ${_positional_names}
-	do
-		test $# -gt 0 || break
-		eval "$_positional_name=\${1}" || die "Error during argument parsing, possibly an Argbash bug." 1
-		shift
-	done
-}
-
-parse_commandline "$@"
-handle_passed_args_count
-assign_positional_args 1 "${_positionals[@]}"
-
 MYIP=$(hostname -I | cut -f1 -d" " | tr -d '[:space:]')
 DOMAIN="$_arg_domain"
+COMPONENT="$_arg_component"
 HOSTNAME="${_arg_hostname:="mail"}"."$DOMAIN"
 TIMEZONE="${_arg_timezone:-"Asia/Singapore"}"
 LETSENCRYPT="${_arg_letsencrypt:-"n"}"
@@ -152,8 +30,6 @@ MYPASSWORD="${_arg_password:-$(openssl rand -base64 9)}"
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
-
-. ./util/utilfunc.sh
 
 #updateSystemPackages
 #installDNS
@@ -164,7 +40,7 @@ NC='\033[0m' # No Color
 #configCert
 #miscConfig
 
-#Preparing the config files to inject
+#Preparing the working directory
 if [ ! -d "/tmp/zcs" ]; then
     mkdir /tmp/zcs
 else
@@ -174,12 +50,12 @@ fi
 #downloadBinaries
 
 echo "Extracting the files ..."
-cd /tmp/zcs #&& tar xzf /tmp/zcs-NETWORK-10.0.0_BETA_4384.UBUNTU20_64.20220803200001.tgz
+cd /tmp/zcs #&& tar xzf /tmp/zcs-NETWORK-10.0.0_GA_1172.UBUNTU18_64.20220804101254.tgz
 
 echo "Creating the auto-install input files ..."
 case $COMPONENT in
   allinone)
-    cat 10-All-in-One >/tmp/zcs/zconfig
+    cat "$mydir/10-All-in-One" >/tmp/zcs/zconfig
     if [[ "$APACHE" == "y" ]]; then
         echo 'INSTALL_PACKAGES="zimbra-core zimbra-ldap zimbra-logger zimbra-mta zimbra-snmp zimbra-store zimbra-apache zimbra-spell zimbra-convertd zimbra-memcached zimbra-proxy zimbra-onlyoffice"' >>/tmp/zcs/zconfig
     else 
@@ -206,24 +82,38 @@ EOF
     ;;
 
   ldap)
-    cat 10-LDAP-Config >/tmp/zcs/zconfig
-    cat 10-LDAP-Answers >/tmp/zcs/zkeys
+    sed -i 's|"$HOSTNAME"|"'${HOSTNAME}'"|g' "$mydir/10-LDAP-Config"
+    sed -i 's|"admin@$DOMAIN"|"admin@'${DOMAIN}'"|g' "$mydir/10-LDAP-Config"
+    sed -i 's|"$DOMAIN"|"'${DOMAIN}'"|g' "$mydir/10-LDAP-Config"
+    sed -i 's|"$MYPASSWORD"|"'${MYPASSWORD}'"|g' "$mydir/10-LDAP-Config"
+    sed -i 's|"$TIMEZONE"|"'${TIMEZONE}'"|g' "$mydir/10-LDAP-Config"
+    memory=$(($(grep MemAvailable /proc/meminfo | awk '{print $2}')/1024/1024))
+    sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-LDAP-Config"
+    cat "$mydir/10-LDAP-Config" >/tmp/zcs/zconfig
+    cat "$mydir/10-LDAP-Answers" >/tmp/zcs/zkeys
     ;;
 
   mbs)
-    cat 10-MBS-Config >/tmp/zcs/zconfig
-    cat 10-MBS-Answers >/tmp/zcs/zkeys
-
+    sed -i 's|"$HOSTNAME"|"'${HOSTNAME}'"|g' "$mydir/10-MBS-Config"
+    sed -i 's|"admin@$DOMAIN"|"admin@'${DOMAIN}'"|g' "$mydir/10-MBS-Config"
+    sed -i 's|"$DOMAIN"|"'${DOMAIN}'"|g' "$mydir/10-MBS-Config"
+    sed -i 's|"$MYPASSWORD"|"'${MYPASSWORD}'"|g' "$mydir/10-MBS-Config"
+    sed -i 's|"$LDAPHOSTNAME"|"'${ldap}'"|g' "$mydir/10-MBS-Config"
+    memory=$(($(grep MemAvailable /proc/meminfo | awk '{print $2}')/1024/1024))
+    sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-MBS-Config"
+    #LDAPSERVERID
+    cat "$mydir/10-MBS-Config" >/tmp/zcs/zconfig
+    cat "$mydir/10-MBS-Answers" >/tmp/zcs/zkeys
     ;;
 
   mtaproxy)
-    cat 10-MTAProxy-Config >/tmp/zcs/zconfig
-    cat 10-MTAProxy-Answers >/tmp/zcs/zkeys
-
+    cat "$mydir/10-MTAProxy-Config" >/tmp/zcs/zconfig
+    cat "$mydir/10-MTAProxy-Answers" >/tmp/zcs/zkeys
     ;;
 
   *)
     echo -n "unknown value - check the component being installed!"
+    echo ""
     exit 1
     ;;
 esac
@@ -234,7 +124,7 @@ getLicense
 D=`date +%s`
 echo "Installing the Zimbra binaries ..."
 echo -e "For more details you can open a new terminal and run ${GREEN}tail -f /tmp/install.log.*${NC}."
-cd /tmp/zcs/zcs-* && ./install.sh -l /tmp/zcs/ZCSLicense.xml -s < /tmp/zcs/zkeys >> /tmp/zcs/install-$D.log 2>&1
+cd /tmp/zcs/zcs-NETWORK* && ./install.sh -l /tmp/zcs/ZCSLicense.xml -s < /tmp/zcs/zkeys >> /tmp/zcs/install-$D.log 2>&1
 echo -e "${GREEN}... Done.${NC}"
 
 echo "Setting up your Zimbra configuration, this can take up to 20 minutes or slightly more."
