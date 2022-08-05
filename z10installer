@@ -24,8 +24,8 @@ DOMAIN="$_arg_domain"
 COMPONENT="$_arg_component"
 if [[ "$COMPONENT" == *"mbs"* ]]; then
   cIN=(${COMPONENT// / })
-  if [[ ${#cIN[@]} !eq 3 ]]; then
-    echo -e "${RED} MBS needs addional LDAP parameters!!${NC}"
+  if [[ ${#cIN[@]} -ne 3 ]]; then # MBS Needs
+    echo -e "${RED} MBS needs addional parameters - LDAP Hostname and LDAP Password!!${NC}"
     exit 1
   fi
   COMPONENT=${cIN[0]}
