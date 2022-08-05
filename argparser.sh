@@ -41,7 +41,7 @@ parse_commandline() {
                 _arg_component="${_key##--component=}"
                 ;;
             -c*)
-                _arg_component="${_key##-p}"
+                _arg_component="${_key##-c}"
                 ;;
             -p|--password)
                 test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
@@ -63,7 +63,7 @@ parse_commandline() {
                 _arg_hostname="${_key##--hostname=}"
                 ;;
             -n)
-                _arg_hostname="${_key##-t}"
+                _arg_hostname="${_key##-n}"
                 ;;
             -t|--timezone)
                 test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
@@ -82,10 +82,10 @@ parse_commandline() {
                 shift
                 ;;
             --apache=*)
-                _arg_apache="${_key##--timezone=}"
+                _arg_apache="${_key##--apache=}"
                 ;;
             -a*)
-                _arg_apache="${_key##-t}"
+                _arg_apache="${_key##-a}"
                 ;;
             -l|--letsencrypt)
                 test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1

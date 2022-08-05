@@ -301,7 +301,7 @@ downloadBinaries() {
     #elif [[ "$version" == "18.04" ]]; then
     #    wget -) /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta1/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz' > /dev/null 2>&1
     #fi
-    #echo -e "${GREEN}... Done.${NC}"
+    echo -e "${GREEN}... Done.${NC}"
 }
 
 createConfig() {
