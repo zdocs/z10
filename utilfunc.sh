@@ -322,23 +322,23 @@ createConfig() {
             echo 'INSTALL_PACKAGES="zimbra-core zimbra-ldap zimbra-logger zimbra-mta zimbra-store zimbra-convertd zimbra-memcached zimbra-proxy zimbra-onlyoffice"' >>/tmp/zcs/zconfig
         fi
         cat <<EOF >/tmp/zcs/zkeys
-    y
-    y
-    y
-    y
-    y
-    n
-    n
-    y
-    $APACHE
-    $APACHE
-    y
-    y
-    y
-    y
-    y
-    y
-    EOF
+y
+y
+y
+y
+y
+n
+n
+y
+$APACHE
+$APACHE
+y
+y
+y
+y
+y
+y
+EOF
         ;;
 
     ldap)
@@ -372,9 +372,9 @@ createConfig() {
         ;;
 
     *)
-        echo -n "unknown value - check the component being installed!"
-        echo ""
+        echo "unknown value - check the component being installed!"
         exit 1
         ;;
+
     esac
 }
