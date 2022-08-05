@@ -303,3 +303,78 @@ downloadBinaries() {
     #fi
     #echo -e "${GREEN}... Done.${NC}"
 }
+
+createConfig() {
+    case $COMPONENT in
+    allinone)
+        sed -i 's|"$HOSTNAME"|"'${HOSTNAME}'"|g' "$mydir/10-All-in-One"
+        sed -i 's|"admin@$DOMAIN"|"admin@'${DOMAIN}'"|g' "$mydir/10-All-in-One"
+        sed -i 's|"$DOMAIN"|"'${DOMAIN}'"|g' "$mydir/10-All-in-One"
+        sed -i 's|"$MYPASSWORD"|"'${MYPASSWORD}'"|g' "$mydir/10-All-in-One"
+        sed -i 's|"$TIMEZONE"|"'${TIMEZONE}'"|g' "$mydir/10-All-in-One"
+        memory=$(($(grep MemAvailable /proc/meminfo | awk '{print $2}')/1024/1024))
+        sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-All-in-One"
+
+        cat "$mydir/10-All-in-One" >/tmp/zcs/zconfig
+        if [[ "$APACHE" == "y" ]]; then
+            echo 'INSTALL_PACKAGES="zimbra-core zimbra-ldap zimbra-logger zimbra-mta zimbra-snmp zimbra-store zimbra-apache zimbra-spell zimbra-convertd zimbra-memcached zimbra-proxy zimbra-onlyoffice"' >>/tmp/zcs/zconfig
+        else 
+            echo 'INSTALL_PACKAGES="zimbra-core zimbra-ldap zimbra-logger zimbra-mta zimbra-store zimbra-convertd zimbra-memcached zimbra-proxy zimbra-onlyoffice"' >>/tmp/zcs/zconfig
+        fi
+        cat <<EOF >/tmp/zcs/zkeys
+    y
+    y
+    y
+    y
+    y
+    n
+    n
+    y
+    $APACHE
+    $APACHE
+    y
+    y
+    y
+    y
+    y
+    y
+    EOF
+        ;;
+
+    ldap)
+        sed -i 's|"$HOSTNAME"|"'${HOSTNAME}'"|g' "$mydir/10-LDAP-Config"
+        sed -i 's|"admin@$DOMAIN"|"admin@'${DOMAIN}'"|g' "$mydir/10-LDAP-Config"
+        sed -i 's|"$DOMAIN"|"'${DOMAIN}'"|g' "$mydir/10-LDAP-Config"
+        sed -i 's|"$MYPASSWORD"|"'${MYPASSWORD}'"|g' "$mydir/10-LDAP-Config"
+        sed -i 's|"$TIMEZONE"|"'${TIMEZONE}'"|g' "$mydir/10-LDAP-Config"
+        memory=$(($(grep MemAvailable /proc/meminfo | awk '{print $2}')/1024/1024))
+        sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-LDAP-Config"
+        cat "$mydir/10-LDAP-Config" >/tmp/zcs/zconfig
+        cat "$mydir/10-LDAP-Answers" >/tmp/zcs/zkeys
+        ;;
+
+    mbs)
+        sed -i 's|"$HOSTNAME"|"'${HOSTNAME}'"|g' "$mydir/10-MBS-Config"
+        sed -i 's|"admin@$DOMAIN"|"admin@'${DOMAIN}'"|g' "$mydir/10-MBS-Config"
+        sed -i 's|"$DOMAIN"|"'${DOMAIN}'"|g' "$mydir/10-MBS-Config"
+        sed -i 's|"$MYPASSWORD"|"'${MYPASSWORD}'"|g' "$mydir/10-MBS-Config"
+        sed -i 's|"$LDAPHOSTNAME"|"'${ldap}'"|g' "$mydir/10-MBS-Config"
+        memory=$(($(grep MemAvailable /proc/meminfo | awk '{print $2}')/1024/1024))
+        sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-MBS-Config"
+        #LDAPSERVERID
+        cat "$mydir/10-MBS-Config" >/tmp/zcs/zconfig
+        cat "$mydir/10-MBS-Answers" >/tmp/zcs/zkeys
+        ;;
+
+    mtaproxy)
+        cat "$mydir/10-MTAProxy-Config" >/tmp/zcs/zconfig
+        cat "$mydir/10-MTAProxy-Answers" >/tmp/zcs/zkeys
+        ;;
+
+    *)
+        echo -n "unknown value - check the component being installed!"
+        echo ""
+        exit 1
+        ;;
+    esac
+}
