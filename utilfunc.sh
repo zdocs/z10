@@ -33,6 +33,7 @@ configVariables() {
 updateSystemPackages() {
     echo "Updating system and installing some essential packages ..."
     #What are the other essential packages?
+    DEBIAN_FRONTEND=noninteractive apt-get clean -qq -y < /dev/null > /dev/null
     DEBIAN_FRONTEND=noninteractive apt-get update -qq -y < /dev/null > /dev/null
     DEBIAN_FRONTEND=noninteractive apt-get upgrade -qq -y < /dev/null > /dev/null
     DEBIAN_FRONTEND=noninteractive apt-get install -qq -y apt-utils< /dev/null > /dev/null
