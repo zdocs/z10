@@ -278,7 +278,6 @@ createConfig() {
         sed -i 's|"$TIMEZONE"|"'${TIMEZONE}'"|g' "$mydir/10-All-in-One"
         memory=$(($(grep MemAvailable /proc/meminfo | awk '{print $2}')/1024/1024))
         sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-All-in-One"
-
         cat "$mydir/10-All-in-One" >/tmp/zcs/zconfig
         echo '' >>/tmp/zcs/zconfig
         if [[ "$APACHE" == "y" ]]; then
