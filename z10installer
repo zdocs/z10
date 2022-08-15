@@ -40,12 +40,19 @@ installZimbra
 
 su - zimbra -c '/opt/zimbra/bin/zmcontrol restart'
 
-echo
-echo
-echo "Zimbra installation details:"
-echo
-echo "  - Webmail Login:  https://${HOSTNAME}"
-echo "  - Admin Console:  https://${HOSTNAME}:9071"
-echo "  - Admin Username: admin"
-echo "  - Admin Password: ${MYPASSWORD}"
-echo ""
+if [[ "$COMPONENT" -ne *"ldap"* ]]; then
+   echo
+   echo
+   echo "Zimbra installation details:"
+   echo
+   echo "  - Webmail Login:  https://${HOSTNAME}"
+   echo "  - Admin Console:  https://${HOSTNAME}:9071"
+   echo "  - Admin Username: admin"
+   echo "  - Admin Password: ${MYPASSWORD}"
+   echo
+else
+   echo
+   echo "LDAP installed. Install the mailbox and mta servers."
+   printf '%s\n' "Example: $(basename $0) -c \"mbs ldap_ip ldap_host ldap_pass\" -n email -l y myorg.com\n"
+   echo
+fi

@@ -11,7 +11,7 @@ die() {
 print_help() {
     printf '%s\n'
     printf '%s\n' "Install and configure Zimbra 10.0 ...\n"
-    printf 'Usage: %s [-c|--component <arg>] [-p|--password <arg>] [-t|--timezone <arg>] [-l|--letsencypt <arg>] [-h|--help] <domain>\n' "$(basename $0)"
+    printf 'Usage: %s [-c|--component <arg>] [-p|--password <arg>] [-t|--timezone <arg>] [-l|--letsencypt <y/n>] [-a|--apache <y/n>] [-h|--help] <domain>\n' "$(basename $0)"
     printf '\t%s\n' "<domain>: Default domain for the Zimbra installation"
     printf '\t%s\n' "-c, --component: Component to install (ldap|mbs|mtaproxy|allinone) [Mandatory]"
     printf '\t%s\n' "                 MBS and MTAProxy requires additional 3 parameters - LDAP IP, Host and Password."

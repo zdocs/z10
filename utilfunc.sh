@@ -5,21 +5,22 @@ configVariables() {
     DOMAIN="$_arg_domain"
     COMPONENT="$_arg_component"
     if [[ "$COMPONENT" == *"mbs"* || "$COMPONENT" == *"mta"* ]]; then
-    cIN=(${COMPONENT// / })
-    if [[ ${#cIN[@]} -ne 4 ]]; then # MBS Needs
-        echo -e "${RED} MBS/MTA needs addional parameters - LDAP Internal IP, LDAP Hostname and LDAP Password!!${NC}"
-        exit 1
+        cIN=(${COMPONENT// / })
+        if [[ ${#cIN[@]} -ne 4 ]]; then # MBS Needs
+            echo -e "${RED} MBS/MTA needs addional parameters - LDAP Internal IP, LDAP Hostname and LDAP Password!!${NC}"
+            exit 1
+        fi
+        COMPONENT=${cIN[0]}
+        LDAPIP=${cIN[1]}
+        LDAPHOSTNAME=${cIN[2]}
+        LDAPPASSWORD=${cIN[3]}
+        LDAPSEARCH=$(ldapsearch -x -LLL -h $LDAPIP -D "uid=zimbra,cn=admins,cn=zimbra" -w LDAPPASSWORD "(mail=admin*)" dn)
+        if [[ $$LDAPSEARCH -ne *"uid=admin"* ]]
+            echo -e "${RED} Cannot connect to the ldap server .. Check firewall and your credentials!!${NC}"
+            exit 1
+        fi
     fi
-    COMPONENT=${cIN[0]}
-    LDAPIP=${cIN[1]}
-    LDAPHOSTNAME=${cIN[2]}
-    LDAPPASSWORD=${cIN[3]}
-    LDAPSEARCH=$(ldapsearch -x -LLL -h $LDAPIP -D "uid=zimbra,cn=admins,cn=zimbra" -w LDAPPASSWORD "(mail=admin*)" dn)
-    if [[ $$LDAPSEARCH != *"uid=admin"* ]]
-        echo -e "${RED} Cannot connect to the ldap server .. Check firewall and your credentials!!${NC}"
-        exit 1
-    fi
-    HOSTNAME="${_arg_hostname:="mail"}"."$DOMAIN"
+    HOSTNAME="${_arg_hostname:-"mail"}"."$DOMAIN"
     TIMEZONE="${_arg_timezone:-"Asia/Singapore"}"
     LETSENCRYPT="${_arg_letsencrypt:-"n"}"
     APACHE="${_arg_apache:-"n"}"
@@ -251,11 +252,11 @@ downloadBinaries() {
 
     #Download binaries
     echo -e "Downloading Zimbra 10 for ${GREEN}Ubuntu $version${NC} ..."
-    #if [[ "$version" == "20.04" ]]; then
-    #    wget -O /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU20_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta2/zcs-NETWORK-10.0.0_BETA_4398.UBUNTU20_64.20220810131936.tgz' > /dev/null 2>&1
+    if [[ "$version" == "20.04" ]]; then
+        wget -O /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU20_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta2/zcs-NETWORK-10.0.0_BETA_4398.UBUNTU20_64.20220810131936.tgz' > /dev/null 2>&1
     #elif [[ "$version" == "18.04" ]]; then
     #    wget -) /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta1/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz' > /dev/null 2>&1
-    #fi
+    fi
     echo -e "${GREEN}... Done.${NC}"
 
     echo "Extracting the files ..."
@@ -405,9 +406,6 @@ postInstallZimbra() {
     ZIMBRAIP=$(netstat -tulpn | grep slapd | awk '{print $4}' | awk -F ':' '{print $1}')
 
     cat >> /tmp/provfile << EOF
-mcf zimbraPublicServiceProtocol https
-mcf zimbraPublicServicePort 443
-mcf zimbraPublicServiceHostname $HOSTNAME
 mcf zimbraReverseProxyMailMode redirect
 mcf zimbraReverseProxySSLProtocols TLSv1.2
 mcf +zimbraReverseProxySSLProtocols TLSv1.3
@@ -425,14 +423,18 @@ mcf zimbraMtaSmtpdTlsMandatoryCiphers  medium
 mcf zimbraMtaSmtpdTlsProtocols '>=TLSv1.2'
 mcf zimbraMtaTlsSecurityLevel may
 
-ms $HOSTNAME zimbraPop3CleartextLoginEnabled FALSE
-ms $HOSTNAME zimbraImapCleartextLoginEnabled FALSE
-
 mcf zimbraLastLogonTimestampFrequency 1s
 mc default zimbraPrefShortEmailAddress FALSE
 
 mcf +zimbraMailTrustedIP 127.0.0.1
 mcf +zimbraMailTrustedIP $ZIMBRAIP
+EOF
+        cat >> /tmp/provfile.1 << EOF
+mcf zimbraPublicServiceProtocol https
+mcf zimbraPublicServicePort 443
+mcf zimbraPublicServiceHostname $HOSTNAME
+mcf zimbraPop3CleartextLoginEnabled FALSE
+mcf zimbraImapCleartextLoginEnabled FALSE
 EOF
 
     sed -i 's/-server -Dhttps.protocols=TLSv1.2 -Djdk.tls.client.protocols=TLSv1.2/-server -Dhttps.protocols=TLSv1.2,TLSv1.3 -Djdk.tls.client.protocols=TLSv1.2,TLSv1.3/g' /opt/zimbra/conf/localconfig.xml
@@ -454,8 +456,10 @@ EOF
     su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e zimbra_same_site_cookie="Strict"'
 
     su - zimbra -c '/opt/zimbra/bin/zmprov < /tmp/provfile'
-
-    #https://wiki.zimbra.com/wiki/Enabling_Admin_Console_Proxy
-    su - zimbra -c "/opt/zimbra/libexec/zmproxyconfig -e -w -C -H $HOSTNAME"
+    if [[ "$COMPONENT" == *"mtaproxy"*  ]]; then
+        su - zimbra -c '/opt/zimbra/bin/zmprov < /tmp/provfile.1'
+        #https://wiki.zimbra.com/wiki/Enabling_Admin_Console_Proxy
+        su - zimbra -c "/opt/zimbra/libexec/zmproxyconfig -e -w -C -H $HOSTNAME"
+    fi
 }
 
