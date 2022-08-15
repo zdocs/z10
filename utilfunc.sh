@@ -45,47 +45,47 @@ updateSystemPackages() {
 
     echo "Disabling some of the non-essential services for Zimbra ..."
     systemctl stop postfix
-    systemctl disable postfix
+    systemctl -q disable postfix
     systemctl mask postfix
 
     systemctl stop iptables
-    systemctl disable iptables
+    systemctl -q disable iptables
     systemctl mask iptables
 
     systemctl stop httpd
-    systemctl disable httpd
+    systemctl -q disable httpd
     systemctl mask httpd
 
     systemctl stop exim
-    systemctl disable exim
+    systemctl -q disable exim
     systemctl mask exim
 
     systemctl stop named
-    systemctl disable named
+    systemctl -q disable named
     systemctl mask named
 
     systemctl stop apache2
-    systemctl disable apache2
+    systemctl -q disable apache2
     systemctl mask apache2
 
     systemctl stop sendmail
-    systemctl disable sendmail
+    systemctl -q disable sendmail
     systemctl mask sendmail
 
     systemctl stop mysqld
-    systemctl disable mysqld
+    systemctl -q disable mysqld
     systemctl mask mysqld
 
     systemctl stop mariadb
-    systemctl disable mariadb
+    systemctl -q disable mariadb
     systemctl mask mariadb
 
     systemctl stop systemd-resolved
-    systemctl disable systemd-resolved
+    systemctl -q disable systemd-resolved
     systemctl mask systemd-resolved
 
     systemctl stop ufw
-    systemctl disable ufw
+    systemctl -q disable ufw
     systemctl mask ufw    
 }
 
