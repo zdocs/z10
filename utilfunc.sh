@@ -86,7 +86,10 @@ updateSystemPackages() {
 
     systemctl stop ufw
     systemctl -q disable ufw
-    systemctl mask ufw    
+    systemctl mask ufw
+    
+    systemctl enable rsyslog.service
+    systemctl restart rsyslog.service
 }
 
 installDNS() {
