@@ -1,6 +1,6 @@
 127.0.0.1   localhost.localdomain localhost
-127.0.1.1   ubuntu
 10.0.0.215	zldap.getzimbra.xyz	zldap
 10.0.0.22	zmbos01.getzimbra.xyz	zmbs01
 10.0.0.5	zmbs02.getzimbra.xyz	zmbs02
 10.0.0.132	zmail.getzimbra.xyz	zmail
+127.0.1.1   ubuntu

@@ -36,8 +36,8 @@ updateSystemPackages() {
     DEBIAN_FRONTEND=noninteractive apt-get update -qq -y < /dev/null > /dev/null
     DEBIAN_FRONTEND=noninteractive apt-get upgrade -qq -y < /dev/null > /dev/null
     DEBIAN_FRONTEND=noninteractive apt-get install -qq -y apt-utils< /dev/null > /dev/null
-    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y netcat-openbsd sudo libidn11 libpcre3 libgmp10 libexpat1 libstdc++6 perl libaio1 unzip pax sysstat sqlite3< /dev/null > /dev/null
-    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y dnsmasq lsb-release net-tools netfilter-persistent dnsutils iptables sed wget< /dev/null > /dev/null
+    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y netcat-openbsd sudo libidn11 libpcre3 libgmp10 libexpat1 libstdc++6 perl libaio1 unzip pax sysstat sqlite3 < /dev/null > /dev/null
+    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y dnsmasq lsb-release net-tools netfilter-persistent dnsutils iptables sed wget < /dev/null > /dev/null
     if [[ $COMPONENT == "mbs" ]]; then
         DEBIAN_FRONTEND=noninteractive apt-get install -qq -y ldapscripts< /dev/null > /dev/null
     fi
@@ -235,7 +235,7 @@ EOF
 
 miscConfig() {
     #other updates
-    DEBIAN_FRONTEND=noninteractive apt install -y locales
+    DEBIAN_FRONTEND=noninteractive apt install -y locales < /dev/null > /dev/null
     locale-gen "en_US.UTF-8"
     update-locale LC_ALL="en_US.UTF-8"
     apt-get -qq update
