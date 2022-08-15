@@ -148,6 +148,8 @@ fixFirewall() {
     #Allow internal ports
     iptables -A INPUT -p tcp -m tcp --dport 389 -j ACCEPT
     iptables -A INPUT -p tcp -m tcp --dport 7025 -j ACCEPT
+    iptables -A INPUT -m state --state NEW -m udp -p udp --dport 514 -j ACCEPT
+    iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 514 -j ACCEPT
 
     #enable ping
     iptables -A INPUT -p icmp --icmp-type 8 -s 0/0 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
