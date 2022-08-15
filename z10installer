@@ -40,7 +40,7 @@ postInstallZimbra
 
 su - zimbra -c '/opt/zimbra/bin/zmcontrol restart'
 
-if [[ "$COMPONENT" -ne *"ldap"* ]]; then
+if [[ "$COMPONENT" != *"ldap"* ]]; then
    echo
    echo
    echo "Zimbra installation details:"

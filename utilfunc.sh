@@ -429,6 +429,7 @@ mc default zimbraPrefShortEmailAddress FALSE
 mcf +zimbraMailTrustedIP 127.0.0.1
 mcf +zimbraMailTrustedIP $ZIMBRAIP
 EOF
+
         cat >> /tmp/provfile.1 << EOF
 mcf zimbraPublicServiceProtocol https
 mcf zimbraPublicServicePort 443
