@@ -8,7 +8,7 @@ n --> SNMP
 y --> Store
 n --> Apace
 n --> Spell
-y --> Convertd
+y --> Convertd  # Not present for LDAP
 y --> Memcache
 y --> Proxy
 y --> Archiving
