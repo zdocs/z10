@@ -462,5 +462,9 @@ EOF
         #https://wiki.zimbra.com/wiki/Enabling_Admin_Console_Proxy
         su - zimbra -c "/opt/zimbra/libexec/zmproxyconfig -e -w -C -H $HOSTNAME"
     fi
+
+    # Update Authkeys and Syslog
+    su - zimbra -c '/opt/zimbra/bin/zmupdateauthkeys'
+    /opt/zimbra/libexec/zmsyslogsetup
 }
 
