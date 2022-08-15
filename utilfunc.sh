@@ -363,15 +363,13 @@ installZimbra () {
     ln -sf /tmp/zcs/install-$D.log /tmp/zcs/install.log
     LOGFILE="/tmp/zcs/install.log"
     echo "Installing the Zimbra binaries ..."
-    echo -e "For more details, you can open a new terminal and check the ${GREEN}$LOGFILE${NC} log."
-    echo -e "run ${GREEN}tail -f ${LOGFILE}${NC}."
+    echo -e "For more details, you can open a new terminal and run ${GREEN}tail -f $LOGFILE /tmp/install.log.*${NC}"
     cd /tmp/zcs/zcs-NETWORK* && ./install.sh -x -l /tmp/zcs/ZCSLicense.xml -s < /tmp/zcs/zkeys >> $LOGFILE 2>&1
     echo -e "${GREEN}... Done.${NC}"
     echo "Setting up your Zimbra configuration, this can take up to 20 minutes or slightly more."
-    echo -e "For more details, you can open a new terminal and check the ${GREEN}$LOGFILE${NC} log."
-    echo -e "run ${GREEN}tail -f ${LOGFILE}${NC}."
+    echo -e "For more details, you can open a new terminal and run ${GREEN}tail -f $LOGFILE${NC}"
     /opt/zimbra/libexec/zmsetup.pl -c /tmp/zcs/zconfig >> $LOGFILE 2>&1
-    echo "Allow mailbox service to re-start ..."
+    echo "Allow mailbox service to re-start completely ..."
     for i in {15..0}; do echo -ne "${RED}$i${NC}\033[0K\r"; sleep 1; done; echo
     if [[ "$COMPONENT" == *"mbs"* || "$COMPONENT" == *"allinone"* ]]; then
         echo "Activating license ..."
