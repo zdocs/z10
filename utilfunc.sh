@@ -282,9 +282,10 @@ createConfig() {
         sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-All-in-One"
 
         cat "$mydir/10-All-in-One" >/tmp/zcs/zconfig
+        echo '' >>/tmp/zcs/zconfig
         if [[ "$APACHE" == "y" ]]; then
             echo 'INSTALL_PACKAGES="zimbra-core zimbra-ldap zimbra-logger zimbra-mta zimbra-snmp zimbra-store zimbra-apache zimbra-spell zimbra-convertd zimbra-memcached zimbra-proxy zimbra-onlyoffice"' >>/tmp/zcs/zconfig
-        else 
+        else
             echo 'INSTALL_PACKAGES="zimbra-core zimbra-ldap zimbra-logger zimbra-mta zimbra-store zimbra-convertd zimbra-memcached zimbra-proxy zimbra-onlyoffice"' >>/tmp/zcs/zconfig
         fi
         cat <<EOF >/tmp/zcs/zkeys
