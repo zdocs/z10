@@ -406,7 +406,6 @@ postInstallZimbra() {
     ZIMBRAIP=$(netstat -tulpn | grep slapd | awk '{print $4}' | awk -F ':' '{print $1}')
 
     cat >> /tmp/provfile << EOF
-mcf zimbraReverseProxyMailMode redirect
 mcf zimbraReverseProxySSLProtocols TLSv1.2
 mcf +zimbraReverseProxySSLProtocols TLSv1.3
 mcf zimbraReverseProxySSLCiphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384'
@@ -434,8 +433,9 @@ EOF
 mcf zimbraPublicServiceProtocol https
 mcf zimbraPublicServicePort 443
 mcf zimbraPublicServiceHostname $HOSTNAME
-mcf zimbraPop3CleartextLoginEnabled FALSE
-mcf zimbraImapCleartextLoginEnabled FALSE
+ms $HOSTNAME zimbraPop3CleartextLoginEnabled FALSE
+ms $HOSTNAME zimbraImapCleartextLoginEnabled FALSE
+ms $HOSTNAME zimbraReverseProxyMailMode redirect
 EOF
 
     sed -i 's/-server -Dhttps.protocols=TLSv1.2 -Djdk.tls.client.protocols=TLSv1.2/-server -Dhttps.protocols=TLSv1.2,TLSv1.3 -Djdk.tls.client.protocols=TLSv1.2,TLSv1.3/g' /opt/zimbra/conf/localconfig.xml
@@ -457,7 +457,7 @@ EOF
     su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e zimbra_same_site_cookie="Strict"'
 
     su - zimbra -c '/opt/zimbra/bin/zmprov < /tmp/provfile'
-    if [[ "$COMPONENT" == *"mtaproxy"*  ]]; then
+    if [[ "$COMPONENT" == *"mtaproxy"* || "$COMPONENT" == *"allinone"* ]]; then
         su - zimbra -c '/opt/zimbra/bin/zmprov < /tmp/provfile.1'
         #https://wiki.zimbra.com/wiki/Enabling_Admin_Console_Proxy
         su - zimbra -c "/opt/zimbra/libexec/zmproxyconfig -e -w -C -H $HOSTNAME"
