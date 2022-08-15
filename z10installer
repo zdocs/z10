@@ -22,33 +22,7 @@ else
    exit 1
 fi
 
-MYIP=$(hostname -I | cut -f1 -d" " | tr -d '[:space:]')
-DOMAIN="$_arg_domain"
-COMPONENT="$_arg_component"
-if [[ "$COMPONENT" == *"mbs"* ]]; then
-  cIN=(${COMPONENT// / })
-  if [[ ${#cIN[@]} -ne 4 ]]; then # MBS Needs
-    echo -e "${RED} MBS needs addional parameters - LDAP Internal IP, LDAP Hostname and LDAP Password!!${NC}"
-    exit 1
-  fi
-  COMPONENT=${cIN[0]}
-  LDAPIP=${cIN[1]}
-  LDAPHOSTNAME=${cIN[2]}
-  LDAPPASSWORD=${cIN[3]}
-  LDAPSEARCH=$(ldapsearch -x -LLL -h $LDAPIP -D "uid=zimbra,cn=admins,cn=zimbra" -w LDAPPASSWORD "(mail=admin*)" dn)
-  if [[ $$LDAPSEARCH != *"uid=admin"* ]]
-    echo -e "${RED} Cannot connect to the ldap server .. Check firewall and your credentials!!${NC}"
-    exit 1
-fi
-HOSTNAME="${_arg_hostname:="mail"}"."$DOMAIN"
-TIMEZONE="${_arg_timezone:-"Asia/Singapore"}"
-LETSENCRYPT="${_arg_letsencrypt:-"n"}"
-APACHE="${_arg_apache:-"n"}"
-MYPASSWORD="${_arg_password:-$(openssl rand -base64 9)}"
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
-
+configVariables
 #updateSystemPackages
 #installDNS
 #fixFirewall
@@ -57,40 +31,11 @@ NC='\033[0m' # No Color
 #resetTimeDate
 #configCert
 #miscConfig
-
-#Preparing the working directory
-if [ ! -d "/tmp/zcs" ]; then
-    mkdir /tmp/zcs
-else
-    rm -rf tmp/zcs/*    #Dangerous Command
-fi
-
 downloadBinaries
-
-echo "Extracting the files ..."
-#cd /tmp/zcs && tar xzf /tmp/zcs-NETWORK-10.0.0_GA_1172.UBUNTU18_64.20220804101254.tgz
-
-echo "Creating the auto-install input files ..."
 createConfig
 #getLicense
-exit 1
-D=`date +%s`
-echo "Installing the Zimbra binaries ..."
-echo -e "For more details you can open a new terminal and run ${GREEN}tail -f /tmp/install.log.*${NC}."
-cd /tmp/zcs/zcs-NETWORK* && ./install.sh -l /tmp/zcs/ZCSLicense.xml -s < /tmp/zcs/zkeys >> /tmp/zcs/install-$D.log 2>&1
-echo -e "${GREEN}... Done.${NC}"
-
-echo "Setting up your Zimbra configuration, this can take up to 20 minutes or slightly more."
-echo -e "For more details you can open a new terminal and run tail -f ${GREEN}/tmp/zmsetup.log${NC}."
-/opt/zimbra/libexec/zmsetup.pl -c /tmp/zcs/zconfig >> /tmp/zcs/install-$D.log 2>&1
-echo "Allow mailbox service to start ..."
-for i in {15..0}; do echo -ne "${RED}$i${NC}\033[0K\r"; sleep 1; done; echo
-echo "Activating license ..."
-su - zimbra -c "zmlicense -a"
-echo -e "${GREEN}... Done.${NC}"
-
-postInstallCert
-postInstallZimbra
+#postInstallCert
+#postInstallZimbra
 
 su - zimbra -c '/opt/zimbra/bin/zmcontrol restart'
 

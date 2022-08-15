@@ -13,7 +13,8 @@ print_help() {
     printf '%s\n' "Install and configure Zimbra 10.0 ...\n"
     printf 'Usage: %s [-c|--component <arg>] [-p|--password <arg>] [-t|--timezone <arg>] [-l|--letsencypt <arg>] [-h|--help] <domain>\n' "$(basename $0)"
     printf '\t%s\n' "<domain>: Default domain for the Zimbra installation"
-    printf '\t%s\n' "-c, --component: Mandatory Component to install (ldap|mbs|mtaproxy|allinone)"
+    printf '\t%s\n' "-c, --component: Component to install (ldap|mbs|mtaproxy|allinone) [Mandatory]"
+    printf '\t%s\n' "                 MBS and MTAProxy requires additional 3 parameters - LDAP IP, Host and Password."
     printf '\t%s\n' "-p, --password: Admin password to use (no default)"
     printf '\t%s\n' "-n, --hostname: Hostname to use for the server (default: mail)"
     printf '\t%s\n' "-t, --timezone: Timezone to set the server to user (optional) (default: 'Singapore')"
@@ -23,7 +24,7 @@ print_help() {
     printf '%s\n'
     printf '%s\n' "Usage: $(basename $0) [-c ldap|mbs|mtaproxy|allinone] [-p mypassword] [-t 'TimeZone'] [-n Server-Name] [-a y] [-l y] Domain-Name"
     printf '%s\n' "Example: $(basename $0) -c ldap -n email -l y myorg.com"
-    printf '%s\n' "Example: $(basename $0) -c \"mbs ldap_host ldap_pass\" -n email -l y myorg.com"
+    printf '%s\n' "Example: $(basename $0) -c \"mbs ldap_ip ldap_host ldap_pass\" -n email -l y myorg.com"
     printf '%s\n'
     exit 1
 }

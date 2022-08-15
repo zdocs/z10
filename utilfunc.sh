@@ -90,8 +90,11 @@ fixFirewall() {
     iptables -A INPUT -p tcp -m tcp --dport 9071  -j ACCEPT
     iptables -A INPUT -p tcp -m tcp --dport 80  -j ACCEPT
     iptables -A INPUT -p tcp -m tcp --dport 25  -j ACCEPT
-    iptables -A INPUT -p tcp -m tcp --dport 389 -j ACCEPT
     iptables -A INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+
+    #Allow internal ports
+    iptables -A INPUT -p tcp -m tcp --dport 389 -j ACCEPT
+    iptables -A INPUT -p tcp -m tcp --dport 7025 -j ACCEPT
 
     #enable ping
     iptables -A INPUT -p icmp --icmp-type 8 -s 0/0 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
@@ -116,7 +119,7 @@ pingLicenseServer() {
        echo "Zimbra License server reachable ..."
        echo -e "${GREEN}... Done.${NC}"
     else
-        echo -e "${RED} Issue with firewall ... Please check!${NC}"
+        echo -e "${RED}Issue reaching the license server. Check your firewall! ${NC}"
         exit 1
     fi
 }
@@ -137,11 +140,10 @@ installDNS() {
     echo "Checking DNS ..."
     name=`host license.zimbra.com`
     if [[ "$name" == *"not found"* ]]; then
-        echo -e "${RED}DNS resolution failed! Check your resolve.conf file.${NC}"
+        echo -e "${RED}DNS resolution failed! Check your DNS configuration.${NC}"
         exit 1
-    else
-        echo -e "${GREEN}... Done.${NC}"
     fi
+    echo -e "${GREEN}... Done.${NC}"
 }
 
 resetHostName() {
@@ -149,13 +151,14 @@ resetHostName() {
     echo "Rewriting the /etc/hosts file ..."
     mv /etc/hosts /etc/hosts.old
     if [[ $COMPONENT == "allinone" ]]; then
-        printf '127.0.0.1\tlocalhost.localdomain\tlocalhost\n127.0.1.1\tubuntu\n'$MYIP'\t'$HOSTNAME'\t${_arg_hostname:="mail"}\t' | tee -a /etc/hosts >/dev/null 2>&1
+        printf '127.0.0.1\tlocalhost.localdomain\tlocalhost\n127.0.1.1\tubuntu\n' | tee -a /etc/hosts >/dev/null 2>&1
+        printf $MYIP'\t'$HOSTNAME'\t${_arg_hostname:="mail"}\n' | tee -a /etc/hosts >/dev/null 2>&1
     else
         printf '127.0.0.1\tlocalhost.localdomain\tlocalhost\n' | tee -a /etc/hosts >/dev/null 2>&1
         printf '127.0.1.1\tubuntu\n' | tee -a /etc/hosts >/dev/null 2>&1
-        printf $MBSIP'\t'$MBSHOSTNAME'\t${_arg_hostname:="mail"}\n' | tee -a /etc/hosts >/dev/null 2>&1
+        printf $MBSIP'\t'$MBSHOSTNAME'\t${_arg_hostname:="mbs"}\n' | tee -a /etc/hosts >/dev/null 2>&1
         printf $LDAPIP'\t'$LDAPHOSTNAME'\tldap' | tee -a /etc/hosts >/dev/null 2>&1
-        printf $MTAPROXYIP'\t'$MTAPROXYNAME'\tldap' | tee -a /etc/hosts >/dev/null 2>&1
+        printf $MTAPROXYIP'\t'$MTAPROXYNAME'\tmta\tproxy\tmail' | tee -a /etc/hosts >/dev/null 2>&1
     fi
     echo -e "${GREEN}... Done.${NC}"
     echo "Setting hostname ($HOSTNAME) ..."
@@ -304,18 +307,59 @@ miscConfig() {
     apt-get -qq update
 }
 
+configVariables() {
+    MYIP=$(hostname -I | cut -f1 -d" " | tr -d '[:space:]')
+    DOMAIN="$_arg_domain"
+    COMPONENT="$_arg_component"
+    if [[ "$COMPONENT" == *"mbs"* || "$COMPONENT" == *"mta"* ]]; then
+    cIN=(${COMPONENT// / })
+    if [[ ${#cIN[@]} -ne 4 ]]; then # MBS Needs
+        echo -e "${RED} MBS/MTA needs addional parameters - LDAP Internal IP, LDAP Hostname and LDAP Password!!${NC}"
+        exit 1
+    fi
+    COMPONENT=${cIN[0]}
+    LDAPIP=${cIN[1]}
+    LDAPHOSTNAME=${cIN[2]}
+    LDAPPASSWORD=${cIN[3]}
+    LDAPSEARCH=$(ldapsearch -x -LLL -h $LDAPIP -D "uid=zimbra,cn=admins,cn=zimbra" -w LDAPPASSWORD "(mail=admin*)" dn)
+    if [[ $$LDAPSEARCH != *"uid=admin"* ]]
+        echo -e "${RED} Cannot connect to the ldap server .. Check firewall and your credentials!!${NC}"
+        exit 1
+    fi
+    HOSTNAME="${_arg_hostname:="mail"}"."$DOMAIN"
+    TIMEZONE="${_arg_timezone:-"Asia/Singapore"}"
+    LETSENCRYPT="${_arg_letsencrypt:-"n"}"
+    APACHE="${_arg_apache:-"n"}"
+    MYPASSWORD="${_arg_password:-$(openssl rand -base64 9)}"
+    GREEN='\033[0;32m'
+    RED='\033[0;31m'
+    NC='\033[0m' # No Color    
+}
+
 downloadBinaries() {
+    #Preparing the working directory
+    echo "Prep the working directory ..."
+    if [ ! -d "/tmp/zcs" ]; then
+        mkdir /tmp/zcs
+    else
+        rm -rf tmp/zcs/*    #Dangerous Command
+    fi
+
     #Download binaries
-    echo "Downloading Zimbra 10 for Ubuntu $version ..."
+    echo -e "Downloading Zimbra 10 for ${GREEN}Ubuntu $version${NC} ..."
     #if [[ "$version" == "20.04" ]]; then
-    #    wget -O /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU20_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta1/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU20_64.20220706123001.tgz' > /dev/null 2>&1
+    #    wget -O /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU20_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta2/zcs-NETWORK-10.0.0_BETA_4398.UBUNTU20_64.20220810131936.tgz' > /dev/null 2>&1
     #elif [[ "$version" == "18.04" ]]; then
     #    wget -) /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta1/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz' > /dev/null 2>&1
     #fi
     echo -e "${GREEN}... Done.${NC}"
+
+    echo "Extracting the files ..."
+    #cd /tmp/zcs && tar xzf /tmp/zcs-NETWORK-10.0.0_GA_1172.UBUNTU18_64.20220804101254.tgz
 }
 
 createConfig() {
+    echo "Creating the auto-install input files for $COMPONENT ..."
     case $COMPONENT in
     allinone)
         sed -i 's|"$HOSTNAME"|"'${HOSTNAME}'"|g' "$mydir/10-All-in-One"
@@ -372,7 +416,7 @@ EOF
         sed -i 's|"$LDAPHOSTNAME"|"'${LDAPHOSTNAME}'"|g' "$mydir/10-MBS-Config"
         memory=$(($(grep MemAvailable /proc/meminfo | awk '{print $2}')/1024/1024))
         sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-MBS-Config"
-        #LDAPSERVERID
+        #LDAPSERVERID -- is this required???
         cat "$mydir/10-MBS-Config" >/tmp/zcs/zconfig
         cat "$mydir/10-MBS-Answers" >/tmp/zcs/zkeys
         ;;
@@ -395,4 +439,26 @@ EOF
         ;;
 
     esac
+}
+
+installZimbra () {
+    D=`date +%s`
+    ln -sf /tmp/zcs/install-$D.log /tmp/zcs/install.log
+    LOGFILE="/tmp/zcs/install.log"
+    echo "Installing the Zimbra binaries ..."
+    echo -e "For more details, you can open a new terminal and check the $LOGFILE log."
+    echo -e "run ${GREEN}tail -f ${LOGFILE}${NC}."
+    cd /tmp/zcs/zcs-NETWORK* && ./install.sh -x -l /tmp/zcs/ZCSLicense.xml -s < /tmp/zcs/zkeys >> $LOGFILE 2>&1
+    echo -e "${GREEN}... Done.${NC}"
+    echo "Setting up your Zimbra configuration, this can take up to 20 minutes or slightly more."
+    echo -e "For more details, you can open a new terminal and check the $LOGFILE log."
+    echo -e "run ${GREEN}tail -f ${LOGFILE}${NC}."
+    /opt/zimbra/libexec/zmsetup.pl -c /tmp/zcs/zconfig >> $LOGFILE 2>&1
+    echo "Allow mailbox service to re-start ..."
+    for i in {15..0}; do echo -ne "${RED}$i${NC}\033[0K\r"; sleep 1; done; echo
+    if [[ "$COMPONENT" == *"mbs"* || "$COMPONENT" == *"allinone"* ]]; then
+        echo "Activating license ..."
+        su - zimbra -c "zmlicense -a"
+    fi
+    echo -e "${GREEN}... Done.${NC}"
 }
