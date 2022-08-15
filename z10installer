@@ -23,20 +23,20 @@ else
 fi
 
 configVariables
-#updateSystemPackages
-#installDNS
-#fixFirewall
-#pingLicenseServer
-#resetHostName
-#resetTimeDate
-#configCert
-#miscConfig
+updateSystemPackages
+installDNS
+fixFirewall
+pingLicenseServer
+resetHostName
+resetTimeDate
+configCert
+miscConfig
 downloadBinaries
 createConfig
-#getLicense
+getLicense
 installZimbra
-#postInstallCert
-#postInstallZimbra
+postInstallCert
+postInstallZimbra
 
 su - zimbra -c '/opt/zimbra/bin/zmcontrol restart'
 
