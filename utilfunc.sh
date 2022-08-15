@@ -252,21 +252,19 @@ downloadBinaries() {
     echo "Prep the working directory ..."
     if [ ! -d "/tmp/zcs" ]; then
         mkdir /tmp/zcs
-    #else
-    #    rm -rf tmp/zcs/*    #Dangerous Command
     fi
 
     #Download binaries
     echo -e "Downloading Zimbra 10 for ${GREEN}Ubuntu $version${NC} ..."
-    #if [[ "$version" == "20.04" ]]; then
-    #    wget -O ~/zcs-NETWORK-10.0.0_BETA_4398.UBUNTU20_64.20220810131936.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta2/zcs-NETWORK-10.0.0_BETA_4398.UBUNTU20_64.20220810131936.tgz' > /dev/null 2>&1
-    #elif [[ "$version" == "18.04" ]]; then
-    #    wget -) /tmp/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta1/zcs-NETWORK-9.1.0_BETA_4334.UBUNTU18_64.20220706123001.tgz' > /dev/null 2>&1
-    #fi
+    if [[ "$version" == "20.04" ]]; then
+        wget -O ~/zcs-NETWORK-10.0.0_BETA_4398.UBUNTU20_64.20220810131936.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta2/zcs-NETWORK-10.0.0_BETA_4398.UBUNTU20_64.20220810131936.tgz' > /dev/null 2>&1
+    elif [[ "$version" == "18.04" ]]; then
+        wget -O ~/zcs-NETWORK-10.0.0_BETA_4398.UBUNTU18_64.20220810131936.tgz 'ftp://91beta:Zimbra.9.1.Beta@ftp.zimbra.com/beta2/zcs-NETWORK-10.0.0_BETA_4398.UBUNTU18_64.20220810131936.tgz' > /dev/null 2>&1
+    fi
     echo -e "${GREEN}... Done.${NC}"
 
     echo "Extracting the files ..."
-    cd /tmp/zcs #&& tar xzf ~/zcs-NETWORK-10.0.0_BETA_4398.UBUNTU20_64.20220810131936.tgz
+    cd /tmp/zcs && tar xzf ~/zcs-NETWORK-10.0.0_BETA_4398.UBUNTU20_64.20220810131936.tgz
 }
 
 createConfig() {
