@@ -34,6 +34,7 @@ configVariables
 downloadBinaries
 createConfig
 #getLicense
+installZimbra
 #postInstallCert
 #postInstallZimbra
 

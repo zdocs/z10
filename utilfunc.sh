@@ -1,5 +1,34 @@
 #!/bin/bash
 
+configVariables() {
+    MYIP=$(hostname -I | cut -f1 -d" " | tr -d '[:space:]')
+    DOMAIN="$_arg_domain"
+    COMPONENT="$_arg_component"
+    if [[ "$COMPONENT" == *"mbs"* || "$COMPONENT" == *"mta"* ]]; then
+    cIN=(${COMPONENT// / })
+    if [[ ${#cIN[@]} -ne 4 ]]; then # MBS Needs
+        echo -e "${RED} MBS/MTA needs addional parameters - LDAP Internal IP, LDAP Hostname and LDAP Password!!${NC}"
+        exit 1
+    fi
+    COMPONENT=${cIN[0]}
+    LDAPIP=${cIN[1]}
+    LDAPHOSTNAME=${cIN[2]}
+    LDAPPASSWORD=${cIN[3]}
+    LDAPSEARCH=$(ldapsearch -x -LLL -h $LDAPIP -D "uid=zimbra,cn=admins,cn=zimbra" -w LDAPPASSWORD "(mail=admin*)" dn)
+    if [[ $$LDAPSEARCH != *"uid=admin"* ]]
+        echo -e "${RED} Cannot connect to the ldap server .. Check firewall and your credentials!!${NC}"
+        exit 1
+    fi
+    HOSTNAME="${_arg_hostname:="mail"}"."$DOMAIN"
+    TIMEZONE="${_arg_timezone:-"Asia/Singapore"}"
+    LETSENCRYPT="${_arg_letsencrypt:-"n"}"
+    APACHE="${_arg_apache:-"n"}"
+    MYPASSWORD="${_arg_password:-$(openssl rand -base64 9)}"
+    GREEN='\033[0;32m'
+    RED='\033[0;31m'
+    NC='\033[0m' # No Color    
+}
+
 updateSystemPackages() {
     echo "Updating system and installing some essential packages ..."
     #What are the other essential packages?
@@ -56,6 +85,28 @@ updateSystemPackages() {
     systemctl stop ufw
     systemctl disable ufw
     systemctl mask ufw    
+}
+
+installDNS() {
+    #Install a DNSMASQ Server
+    echo "Configuring dnsmasq ..."
+    mv /etc/dnsmasq.conf /etc/dnsmasq.conf.old
+    #create the conf file
+    printf 'server=8.8.8.8\nserver=8.8.4.4\nserver=9.9.9.9\nserver=149.112.112.112\nserver=1.1.1.1\nserver=1.0.0.1\nlisten-address=127.0.0.1\ndomain='$DOMAIN'\nmx-host='$DOMAIN','$HOSTNAME',0\naddress=/'$HOSTNAME'/'$MYIP'\n' | tee -a /etc/dnsmasq.conf >/dev/null
+    mv /etc/resolv.conf {,.old}
+    echo "nameserver 127.0.0.1" > /etc/resolv.conf
+    # restart dns services
+    systemctl enable dnsmasq.service > /dev/null 2>&1 && systemctl restart dnsmasq.service
+    echo -e "${GREEN}... Done.${NC}"
+
+    # Check DNS
+    echo "Checking DNS ..."
+    name=`host license.zimbra.com`
+    if [[ "$name" == *"not found"* ]]; then
+        echo -e "${RED}DNS resolution failed! Check your DNS configuration.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}... Done.${NC}"
 }
 
 fixFirewall() {
@@ -124,28 +175,6 @@ pingLicenseServer() {
     fi
 }
 
-installDNS() {
-    #Install a DNSMASQ Server
-    echo "Configuring dnsmasq ..."
-    mv /etc/dnsmasq.conf /etc/dnsmasq.conf.old
-    #create the conf file
-    printf 'server=8.8.8.8\nserver=8.8.4.4\nserver=9.9.9.9\nserver=149.112.112.112\nserver=1.1.1.1\nserver=1.0.0.1\nlisten-address=127.0.0.1\ndomain='$DOMAIN'\nmx-host='$DOMAIN','$HOSTNAME',0\naddress=/'$HOSTNAME'/'$MYIP'\n' | tee -a /etc/dnsmasq.conf >/dev/null
-    mv /etc/resolv.conf {,.old}
-    echo "nameserver 127.0.0.1" > /etc/resolv.conf
-    # restart dns services
-    systemctl enable dnsmasq.service > /dev/null 2>&1 && systemctl restart dnsmasq.service
-    echo -e "${GREEN}... Done.${NC}"
-
-    # Check DNS
-    echo "Checking DNS ..."
-    name=`host license.zimbra.com`
-    if [[ "$name" == *"not found"* ]]; then
-        echo -e "${RED}DNS resolution failed! Check your DNS configuration.${NC}"
-        exit 1
-    fi
-    echo -e "${GREEN}... Done.${NC}"
-}
-
 resetHostName() {
     # Reset the hosts file
     echo "Rewriting the /etc/hosts file ..."
@@ -154,11 +183,7 @@ resetHostName() {
         printf '127.0.0.1\tlocalhost.localdomain\tlocalhost\n127.0.1.1\tubuntu\n' | tee -a /etc/hosts >/dev/null 2>&1
         printf $MYIP'\t'$HOSTNAME'\t${_arg_hostname:="mail"}\n' | tee -a /etc/hosts >/dev/null 2>&1
     else
-        printf '127.0.0.1\tlocalhost.localdomain\tlocalhost\n' | tee -a /etc/hosts >/dev/null 2>&1
-        printf '127.0.1.1\tubuntu\n' | tee -a /etc/hosts >/dev/null 2>&1
-        printf $MBSIP'\t'$MBSHOSTNAME'\t${_arg_hostname:="mbs"}\n' | tee -a /etc/hosts >/dev/null 2>&1
-        printf $LDAPIP'\t'$LDAPHOSTNAME'\tldap' | tee -a /etc/hosts >/dev/null 2>&1
-        printf $MTAPROXYIP'\t'$MTAPROXYNAME'\tmta\tproxy\tmail' | tee -a /etc/hosts >/dev/null 2>&1
+        cat "$mydir/hosts" > /etc/hosts
     fi
     echo -e "${GREEN}... Done.${NC}"
     echo "Setting hostname ($HOSTNAME) ..."
@@ -207,133 +232,12 @@ EOF
     fi
 }
 
-getLicense() {
-    echo "Download the trial license ..."
-    wget -q --no-check-certificate --no-proxy -O /tmp/zcs/ZCSLicense.xml "https://license.zimbra.com/zimbraLicensePortal/public/STLicense?IssuedToName=MyCompany&IssuedToEmail=noone@$DOMAIN" 
-    if [ ! -s "/tmp/zcs/ZCSLicense.xml" ]; then
-        echo -e "${RED}License file could not be downloaded. Please check and re-run $(basename $0).${NC}"
-        exit 1
-    fi
-    echo -e "${GREEN}... Done.${NC}"
-}
-
-
-postInstallCert() {
-    if [ "$LETSENCRYPT" != "${LETSENCRYPT#[Yy]}" ] ;then # this grammar (the #[] operator) means that the variable $answer where any Y or y in 1st position will be dropped if they exist.
-        echo "Deploying Let's Encrypt on Zimbra"
-        ln -s /usr/local/sbin/letsencrypt-zimbra /etc/cron.daily/letsencrypt-zimbra
-        ip=$(dig +short @8.8.4.4 $(hostname))   # Ensure local IP resolution does not happen
-        if [ -n "$ip" ]; then
-            /etc/cron.daily/letsencrypt-zimbra
-        else
-            echo -e "${RED}Could not resolve hostname ...${NC}." 
-            echo -e "${RED}Correct your nameserver entries and run the command ${GREEN}/etc/cron.daily/letsencrypt-zimbra${NC}."
-        fi
-    fi
-
-}
-
-postInstallZimbra() {
-    echo "Deploying additional Zimlets"
-    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y zimbra-zimlet-user-sessions-management< /dev/null > /dev/null
-
-    if [[ $(hostname --fqdn) == *"barrydegraaff"* ]] || [[ $(hostname --fqdn) == *"zimbra.tech"* ]]; then
-    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y zimbra-zimlet-sideloader< /dev/null > /dev/null
-    fi
-
-    echo "Setting optimal security settings"
-    rm -Rf /tmp/provfile
-    ZIMBRAIP=$(netstat -tulpn | grep slapd | awk '{print $4}' | awk -F ':' '{print $1}')
-
-    cat >> /tmp/provfile << EOF
-mcf zimbraPublicServiceProtocol https
-mcf zimbraPublicServicePort 443
-mcf zimbraPublicServiceHostname $HOSTNAME
-mcf zimbraReverseProxySSLProtocols TLSv1.2
-mcf +zimbraReverseProxySSLProtocols TLSv1.3
-mcf zimbraReverseProxySSLCiphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384'
-
-mcf +zimbraResponseHeader "Strict-Transport-Security: max-age=31536000; includeSubDomains"
-mcf +zimbraResponseHeader "X-Content-Type-Options: nosniff"
-mcf +zimbraResponseHeader "X-Robots-Tag: noindex"
-mcf zimbraMailKeepOutWebCrawlers TRUE
-
-mcf zimbraSSLDHParam /etc/ffdhe4096.pem
-
-mcf zimbraMtaSmtpdTlsCiphers medium
-mcf zimbraMtaSmtpdTlsMandatoryCiphers  medium
-mcf zimbraMtaSmtpdTlsProtocols '>=TLSv1.2'
-mcf zimbraMtaTlsSecurityLevel may
-
-ms $HOSTNAME zimbraPop3CleartextLoginEnabled FALSE
-ms $HOSTNAME zimbraImapCleartextLoginEnabled FALSE
-
-mcf zimbraLastLogonTimestampFrequency 1s
-mc default zimbraPrefShortEmailAddress FALSE
-
-mcf +zimbraMailTrustedIP 127.0.0.1
-mcf +zimbraMailTrustedIP $ZIMBRAIP
-EOF
-
-    sed -i 's/-server -Dhttps.protocols=TLSv1.2 -Djdk.tls.client.protocols=TLSv1.2/-server -Dhttps.protocols=TLSv1.2,TLSv1.3 -Djdk.tls.client.protocols=TLSv1.2,TLSv1.3/g' /opt/zimbra/conf/localconfig.xml
-    wget https://raw.githubusercontent.com/internetstandards/dhe_groups/master/ffdhe4096.pem -O /etc/ffdhe4096.pem
-
-    su - zimbra -c '/opt/zimbra/bin/postconf -e fast_flush_domains=""'
-    su - zimbra -c '/opt/zimbra/bin/postconf -e smtpd_etrn_restrictions=reject'
-    su - zimbra -c '/opt/zimbra/bin/postconf -e disable_vrfy_command=yes'
-    su - zimbra -c '/opt/zimbra/bin/postconf -e tls_medium_cipherlist="ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"'
-    su - zimbra -c '/opt/zimbra/bin/postconf -e tls_preempt_cipherlist=no'
-
-    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e ldap_common_tlsprotocolmin="3.3"'
-    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e ldap_common_tlsciphersuite="HIGH"'
-    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e ldap_starttls_supported=1'
-    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e zimbra_require_interprocess_security=1'
-    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e ldap_starttls_required=true'
-
-    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e alias_login_enabled=false'
-    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e zimbra_same_site_cookie="Strict"'
-
-    su - zimbra -c '/opt/zimbra/bin/zmprov < /tmp/provfile'
-
-    #https://wiki.zimbra.com/wiki/Enabling_Admin_Console_Proxy
-    su - zimbra -c "/opt/zimbra/libexec/zmproxyconfig -e -w -C -H $HOSTNAME"
-}
-
 miscConfig() {
     #other updates
     DEBIAN_FRONTEND=noninteractive apt install -y locales
     locale-gen "en_US.UTF-8"
     update-locale LC_ALL="en_US.UTF-8"
     apt-get -qq update
-}
-
-configVariables() {
-    MYIP=$(hostname -I | cut -f1 -d" " | tr -d '[:space:]')
-    DOMAIN="$_arg_domain"
-    COMPONENT="$_arg_component"
-    if [[ "$COMPONENT" == *"mbs"* || "$COMPONENT" == *"mta"* ]]; then
-    cIN=(${COMPONENT// / })
-    if [[ ${#cIN[@]} -ne 4 ]]; then # MBS Needs
-        echo -e "${RED} MBS/MTA needs addional parameters - LDAP Internal IP, LDAP Hostname and LDAP Password!!${NC}"
-        exit 1
-    fi
-    COMPONENT=${cIN[0]}
-    LDAPIP=${cIN[1]}
-    LDAPHOSTNAME=${cIN[2]}
-    LDAPPASSWORD=${cIN[3]}
-    LDAPSEARCH=$(ldapsearch -x -LLL -h $LDAPIP -D "uid=zimbra,cn=admins,cn=zimbra" -w LDAPPASSWORD "(mail=admin*)" dn)
-    if [[ $$LDAPSEARCH != *"uid=admin"* ]]
-        echo -e "${RED} Cannot connect to the ldap server .. Check firewall and your credentials!!${NC}"
-        exit 1
-    fi
-    HOSTNAME="${_arg_hostname:="mail"}"."$DOMAIN"
-    TIMEZONE="${_arg_timezone:-"Asia/Singapore"}"
-    LETSENCRYPT="${_arg_letsencrypt:-"n"}"
-    APACHE="${_arg_apache:-"n"}"
-    MYPASSWORD="${_arg_password:-$(openssl rand -base64 9)}"
-    GREEN='\033[0;32m'
-    RED='\033[0;31m'
-    NC='\033[0m' # No Color    
 }
 
 downloadBinaries() {
@@ -441,6 +345,16 @@ EOF
     esac
 }
 
+getLicense() {
+    echo "Download the trial license ..."
+    wget -q --no-check-certificate --no-proxy -O /tmp/zcs/ZCSLicense.xml "https://license.zimbra.com/zimbraLicensePortal/public/STLicense?IssuedToName=MyCompany&IssuedToEmail=noone@$DOMAIN" 
+    if [ ! -s "/tmp/zcs/ZCSLicense.xml" ]; then
+        echo -e "${RED}License file could not be downloaded. Please check and re-run $(basename $0).${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}... Done.${NC}"
+}
+
 installZimbra () {
     D=`date +%s`
     ln -sf /tmp/zcs/install-$D.log /tmp/zcs/install.log
@@ -462,3 +376,86 @@ installZimbra () {
     fi
     echo -e "${GREEN}... Done.${NC}"
 }
+
+postInstallCert() {
+    if [ "$LETSENCRYPT" != "${LETSENCRYPT#[Yy]}" ] ;then # this grammar (the #[] operator) means that the variable $answer where any Y or y in 1st position will be dropped if they exist.
+        echo "Deploying Let's Encrypt on Zimbra"
+        ln -s /usr/local/sbin/letsencrypt-zimbra /etc/cron.daily/letsencrypt-zimbra
+        ip=$(dig +short @8.8.4.4 $(hostname))   # Ensure local IP resolution does not happen
+        if [ -n "$ip" ]; then
+            /etc/cron.daily/letsencrypt-zimbra
+        else
+            echo -e "${RED}Could not resolve hostname ...${NC}." 
+            echo -e "${RED}Correct your nameserver entries and run the command ${GREEN}/etc/cron.daily/letsencrypt-zimbra${NC}."
+        fi
+    fi
+}
+
+postInstallZimbra() {
+    echo "Deploying additional Zimlets"
+    if [[ "$COMPONENT" == *"mbs"* || "$COMPONENT" == *"allinone"* ]]; then
+        DEBIAN_FRONTEND=noninteractive apt-get install -qq -y zimbra-zimlet-user-sessions-management< /dev/null > /dev/null
+        if [[ $(hostname --fqdn) == *"barrydegraaff"* ]] || [[ $(hostname --fqdn) == *"zimbra.tech"* ]]; then
+            DEBIAN_FRONTEND=noninteractive apt-get install -qq -y zimbra-zimlet-sideloader< /dev/null > /dev/null
+        fi
+    fi
+
+    echo "Setting optimal security settings"
+    rm -Rf /tmp/provfile
+    ZIMBRAIP=$(netstat -tulpn | grep slapd | awk '{print $4}' | awk -F ':' '{print $1}')
+
+    cat >> /tmp/provfile << EOF
+mcf zimbraPublicServiceProtocol https
+mcf zimbraPublicServicePort 443
+mcf zimbraPublicServiceHostname $HOSTNAME
+mcf zimbraReverseProxyMailMode redirect
+mcf zimbraReverseProxySSLProtocols TLSv1.2
+mcf +zimbraReverseProxySSLProtocols TLSv1.3
+mcf zimbraReverseProxySSLCiphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384'
+
+mcf +zimbraResponseHeader "Strict-Transport-Security: max-age=31536000; includeSubDomains"
+mcf +zimbraResponseHeader "X-Content-Type-Options: nosniff"
+mcf +zimbraResponseHeader "X-Robots-Tag: noindex"
+mcf zimbraMailKeepOutWebCrawlers TRUE
+
+mcf zimbraSSLDHParam /etc/ffdhe4096.pem
+
+mcf zimbraMtaSmtpdTlsCiphers medium
+mcf zimbraMtaSmtpdTlsMandatoryCiphers  medium
+mcf zimbraMtaSmtpdTlsProtocols '>=TLSv1.2'
+mcf zimbraMtaTlsSecurityLevel may
+
+ms $HOSTNAME zimbraPop3CleartextLoginEnabled FALSE
+ms $HOSTNAME zimbraImapCleartextLoginEnabled FALSE
+
+mcf zimbraLastLogonTimestampFrequency 1s
+mc default zimbraPrefShortEmailAddress FALSE
+
+mcf +zimbraMailTrustedIP 127.0.0.1
+mcf +zimbraMailTrustedIP $ZIMBRAIP
+EOF
+
+    sed -i 's/-server -Dhttps.protocols=TLSv1.2 -Djdk.tls.client.protocols=TLSv1.2/-server -Dhttps.protocols=TLSv1.2,TLSv1.3 -Djdk.tls.client.protocols=TLSv1.2,TLSv1.3/g' /opt/zimbra/conf/localconfig.xml
+    wget https://raw.githubusercontent.com/internetstandards/dhe_groups/master/ffdhe4096.pem -O /etc/ffdhe4096.pem
+
+    su - zimbra -c '/opt/zimbra/bin/postconf -e fast_flush_domains=""'
+    su - zimbra -c '/opt/zimbra/bin/postconf -e smtpd_etrn_restrictions=reject'
+    su - zimbra -c '/opt/zimbra/bin/postconf -e disable_vrfy_command=yes'
+    su - zimbra -c '/opt/zimbra/bin/postconf -e tls_medium_cipherlist="ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"'
+    su - zimbra -c '/opt/zimbra/bin/postconf -e tls_preempt_cipherlist=no'
+
+    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e ldap_common_tlsprotocolmin="3.3"'
+    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e ldap_common_tlsciphersuite="HIGH"'
+    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e ldap_starttls_supported=1'
+    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e zimbra_require_interprocess_security=1'
+    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e ldap_starttls_required=true'
+
+    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e alias_login_enabled=false'
+    su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e zimbra_same_site_cookie="Strict"'
+
+    su - zimbra -c '/opt/zimbra/bin/zmprov < /tmp/provfile'
+
+    #https://wiki.zimbra.com/wiki/Enabling_Admin_Console_Proxy
+    su - zimbra -c "/opt/zimbra/libexec/zmproxyconfig -e -w -C -H $HOSTNAME"
+}
+
