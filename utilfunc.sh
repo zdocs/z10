@@ -367,7 +367,7 @@ installZimbra () {
     cd /tmp/zcs/zcs-NETWORK* && ./install.sh -x -l /tmp/zcs/ZCSLicense.xml -s < /tmp/zcs/zkeys >> $LOGFILE 2>&1
     echo -e "${GREEN}... Done.${NC}"
     echo "Setting up your Zimbra configuration, this can take up to 20 minutes or slightly more."
-    echo -e "For more details, you can open a new terminal and run ${GREEN}tail -f $LOGFILE${NC}"
+    echo -e "For more details, you can open a new terminal and run ${GREEN}tail -f $LOGFILE /tmp/zmsetup.log${NC}"
     /opt/zimbra/libexec/zmsetup.pl -c /tmp/zcs/zconfig >> $LOGFILE 2>&1
     echo "Allow mailbox service to re-start completely ..."
     for i in {15..0}; do echo -ne "${RED}$i${NC}\033[0K\r"; sleep 1; done; echo
