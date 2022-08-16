@@ -15,7 +15,7 @@ configVariables() {
         LDAPHOSTNAME=${cIN[2]}
         LDAPPASSWORD=${cIN[3]}
         LDAPSEARCH=$(ldapsearch -x -LLL -h $LDAPIP -D "uid=zimbra,cn=admins,cn=zimbra" -w $LDAPPASSWORD "(mail=admin*)" dn)
-        if [[ $$LDAPSEARCH -ne *"uid=admin"* ]]; then
+        if [[ $$LDAPSEARCH != *"uid=admin"* ]]; then
             echo -e "${RED} Cannot connect to the ldap server .. Check firewall and your credentials!!${NC}"
             exit 1
         fi
@@ -203,7 +203,7 @@ resetTimeDate() {
 
 configCert() {
     if [ "$LETSENCRYPT" != "${LETSENCRYPT#[Yy]}" ] ;then # this grammar (the #[] operator) means that the variable $answer where any Y or y in 1st position will be dropped if they exist.
-    if [ $(dig +short type257 $(hostname --d) | grep "letsencrypt.org" | grep -v "issuewild" | grep "issue" | wc -l) -eq 1 ]; then   
+    if [ $(dig +short type257 $(hostname --d) | grep "letsencrypt.org" | grep "issue" | wc -l) -eq 1 ]; then   
         echo "Installing certbot"
         apt install -y python3 python3-venv libaugeas0
         python3 -m venv /opt/certbot/
