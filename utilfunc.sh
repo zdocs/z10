@@ -38,10 +38,7 @@ updateSystemPackages() {
     DEBIAN_FRONTEND=noninteractive apt-get upgrade -qq -y < /dev/null > /dev/null
     DEBIAN_FRONTEND=noninteractive apt-get install -qq -y apt-utils< /dev/null > /dev/null
     DEBIAN_FRONTEND=noninteractive apt-get install -qq -y netcat-openbsd sudo libidn11 libpcre3 libgmp10 libexpat1 libstdc++6 perl libaio1 unzip pax sysstat sqlite3 < /dev/null > /dev/null
-    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y dnsmasq lsb-release net-tools netfilter-persistent dnsutils iptables sed wget rsyslog < /dev/null > /dev/null
-    if [[ $COMPONENT == "mbs" ]]; then
-        DEBIAN_FRONTEND=noninteractive apt-get install -qq -y ldapscripts< /dev/null > /dev/null
-    fi
+    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y dnsmasq lsb-release net-tools netfilter-persistent dnsutils iptables sed wget rsyslog ldapscripts < /dev/null > /dev/null
 
     echo "Disabling some of the non-essential services for Zimbra ..."
     systemctl stop postfix
@@ -117,7 +114,7 @@ installDNS() {
 fixFirewall() {
     # Update firewall
     echo "Enabling firewall for Zimbra ports ..."
-    echo "Ports 22/25/143/80/443/995/993/9071 will be opened to the internet."
+    echo "Ports ${GREEN}22/25/143/80/443/995/993/9071${NC} will be opened to the internet."
     echo "Please check your iptables for more info."
 
     #flushing iptables while having INPUT=DROP policy will terminate ssh connection

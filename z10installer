@@ -22,8 +22,8 @@ else
    exit 1
 fi
 
-configVariables
 updateSystemPackages
+configVariables
 installDNS
 fixFirewall
 pingLicenseServer
