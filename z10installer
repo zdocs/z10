@@ -56,7 +56,8 @@ else
    echo "Zimbra installation details:"
    echo "  - LDAP Hostname: ${HOSTNAME}"
    echo "  - LDAP Internal: ${MYIP}"
-   echo "  - LDAP Password: ${su - zimbra -c 'zmlocalconfig -s -m nokey ldap_root_password'}"
+   lpass=$(su - zimbra -c 'zmlocalconfig -s -m nokey ldap_root_password')
+   echo "  - LDAP Password: ${lpass}"
    printf '%s\n' "Example: $(basename $0) -c \"mbs ldap_ip ldap_host ldap_pass\" -n email -l y myorg.com\n"
    echo
 fi

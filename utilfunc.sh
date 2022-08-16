@@ -98,7 +98,7 @@ installDNS() {
     mv /etc/resolv.conf {,.old}
     echo "nameserver 127.0.0.1" > /etc/resolv.conf
     # restart dns services
-    systemctl enable dnsmasq.service > /dev/null 2>&1 && systemctl restart dnsmasq.service
+    systemctl enable dnsmasq.service > /dev/null 2>&1 && systemctl restart dnsmasq.service > /dev/null 2>&1
     echo -e "${GREEN}... Done.${NC}"
 
     # Check DNS
@@ -238,10 +238,12 @@ EOF
 
 miscConfig() {
     #other updates
+    echo -e "Setting lcoale to ${GREEN}en_US.UTF-8${NC} ..."
     DEBIAN_FRONTEND=noninteractive apt install -qq -y locales < /dev/null > /dev/null
-    locale-gen "en_US.UTF-8"
-    update-locale LC_ALL="en_US.UTF-8"
+    locale-gen "en_US.UTF-8" > /dev/null
+    update-locale LC_ALL="en_US.UTF-8" > /dev/null
     apt-get -qq update < /dev/null > /dev/null
+    echo -e "${GREEN}... Done.${NC}"
 }
 
 downloadBinaries() {
@@ -319,7 +321,8 @@ EOF
         sed -i 's|"$HOSTNAME"|"'${HOSTNAME}'"|g' "$mydir/10-MBS-Config"
         sed -i 's|"admin@$DOMAIN"|"admin@'${DOMAIN}'"|g' "$mydir/10-MBS-Config"
         sed -i 's|"$DOMAIN"|"'${DOMAIN}'"|g' "$mydir/10-MBS-Config"
-        sed -i 's|"$MYPASSWORD"|"'${LDAPPASSWORD}'"|g' "$mydir/10-MBS-Config"
+        sed -i 's|"$LDAPPASSWORD"|"'${LDAPPASSWORD}'"|g' "$mydir/10-MTAProxy-Config"
+        sed -i 's|"$MYPASSWORD"|"'${MYPASSWORD}'"|g' "$mydir/10-MTAProxy-Config"
         sed -i 's|"$LDAPHOSTNAME"|"'${LDAPHOSTNAME}'"|g' "$mydir/10-MBS-Config"
         memory=$(($(grep MemAvailable /proc/meminfo | awk '{print $2}')/1024/1024))
         sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-MBS-Config"
@@ -448,7 +451,7 @@ ms $HOSTNAME zimbraReverseProxyMailMode redirect
 EOF
 
     sed -i 's/-server -Dhttps.protocols=TLSv1.2 -Djdk.tls.client.protocols=TLSv1.2/-server -Dhttps.protocols=TLSv1.2,TLSv1.3 -Djdk.tls.client.protocols=TLSv1.2,TLSv1.3/g' /opt/zimbra/conf/localconfig.xml
-    wget https://raw.githubusercontent.com/internetstandards/dhe_groups/master/ffdhe4096.pem -O /etc/ffdhe4096.pem
+    wget -q https://raw.githubusercontent.com/internetstandards/dhe_groups/master/ffdhe4096.pem -O /etc/ffdhe4096.pem
 
     if [[ "$COMPONENT" == *"mtaproxy"* || "$COMPONENT" == *"allinone"* ]]; then
         su - zimbra -c '/opt/zimbra/bin/postconf -e fast_flush_domains=""'
