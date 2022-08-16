@@ -15,7 +15,7 @@ configVariables() {
         LDAPHOSTNAME=${cIN[2]}
         LDAPPASSWORD=${cIN[3]}
         LDAPSEARCH=$(ldapsearch -x -LLL -h $LDAPIP -D "uid=zimbra,cn=admins,cn=zimbra" -w $LDAPPASSWORD uid=zimbra dn)
-        if [[ $$LDAPSEARCH != *"uid=admin"* ]]; then
+        if [[ $$LDAPSEARCH != *"uid=zimbra"* ]]; then
             echo -e "${RED} Cannot connect to the ldap server .. Check firewall and your credentials!!${NC}"
             exit 1
         fi
