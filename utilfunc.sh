@@ -373,6 +373,7 @@ installZimbra () {
         cd /tmp/zcs/zcs-NETWORK* && ./install.sh -x -s < /tmp/zcs/zkeys >> $LOGFILE 2>&1
     fi
     echo -e "${GREEN}... Done.${NC}"
+    read -p "Press any key to resume ..."
     echo "Setting up your Zimbra configuration, this can take up to 20 minutes or slightly more."
     echo -e "For more details, you can open a new terminal and run ${GREEN}tail -f $LOGFILE /tmp/zmsetup.log${NC}"
     /opt/zimbra/libexec/zmsetup.pl -c /tmp/zcs/zconfig >> $LOGFILE 2>&1

@@ -2,5 +2,5 @@
 10.0.0.215  zldap.zimbra91.com	zldap
 10.0.0.22   zmbs01.zimbra91.com zmbs01
 10.0.0.5    zmbs02.zimbra91.com zmbs02
-10.0.0.132  zmail.zimbra91.com	zmail
+10.0.0.132  mail.zimbra91.com	mail
 127.0.1.1   ubuntu
