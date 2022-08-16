@@ -205,10 +205,10 @@ configCert() {
     if [ "$LETSENCRYPT" != "${LETSENCRYPT#[Yy]}" ] ;then # this grammar (the #[] operator) means that the variable $answer where any Y or y in 1st position will be dropped if they exist.
     if [ $(dig +short type257 $(hostname --d) | grep "letsencrypt.org" | grep "issue" | wc -l) -eq 1 ]; then   
         echo "Installing certbot"
-        apt install -y python3 python3-venv libaugeas0
+        apt install -qq -y python3 python3-venv libaugeas0  < /dev/null > /dev/null
         python3 -m venv /opt/certbot/
-        /opt/certbot/bin/pip install --upgrade pip
-        /opt/certbot/bin/pip install certbot
+        /opt/certbot/bin/pip install --upgrade pip  < /dev/null > /dev/null
+        /opt/certbot/bin/pip install certbot  < /dev/null > /dev/null
         ln -s /opt/certbot/bin/certbot /usr/local/sbin/certbot
         /usr/local/sbin/certbot certonly -d $(hostname --fqdn) --standalone --preferred-chain  "ISRG Root X1" --agree-tos --register-unsafely-without-email
         cat >> /usr/local/sbin/letsencrypt-zimbra << EOF
@@ -241,7 +241,7 @@ miscConfig() {
     DEBIAN_FRONTEND=noninteractive apt install -qq -y locales < /dev/null > /dev/null
     locale-gen "en_US.UTF-8"
     update-locale LC_ALL="en_US.UTF-8"
-    apt-get -qq update
+    apt-get -qq update < /dev/null > /dev/null
 }
 
 downloadBinaries() {
@@ -333,7 +333,8 @@ EOF
         sed -i 's|"$HOSTNAME"|"'${HOSTNAME}'"|g' "$mydir/10-MTAProxy-Config"
         sed -i 's|"admin@$DOMAIN"|"admin@'${DOMAIN}'"|g' "$mydir/10-MTAProxy-Config"
         sed -i 's|"$DOMAIN"|"'${DOMAIN}'"|g' "$mydir/10-MTAProxy-Config"
-        sed -i 's|"$MYPASSWORD"|"'${LDAPPASSWORD}'"|g' "$mydir/10-MTAProxy-Config"
+        sed -i 's|"$LDAPPASSWORD"|"'${LDAPPASSWORD}'"|g' "$mydir/10-MTAProxy-Config"
+        sed -i 's|"$MYPASSWORD"|"'${MYPASSWORD}'"|g' "$mydir/10-MTAProxy-Config"
         sed -i 's|"$LDAPHOSTNAME"|"'${LDAPHOSTNAME}'"|g' "$mydir/10-MTAProxy-Config"
         memory=$(($(grep MemAvailable /proc/meminfo | awk '{print $2}')/1024/1024))
         sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-MTAProxy-Config"
