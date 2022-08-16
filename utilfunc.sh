@@ -323,6 +323,7 @@ EOF
         sed -i 's|"$LDAPHOSTNAME"|"'${LDAPHOSTNAME}'"|g' "$mydir/10-MBS-Config"
         memory=$(($(grep MemAvailable /proc/meminfo | awk '{print $2}')/1024/1024))
         sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-MBS-Config"
+        sed -i 's|$APACHE|'${APACHE}'|g' "$mydir/10-MBS-Answers"
         #LDAPSERVERID -- is this required???
         cat "$mydir/10-MBS-Config" >/tmp/zcs/zconfig
         cat "$mydir/10-MBS-Answers" >/tmp/zcs/zkeys

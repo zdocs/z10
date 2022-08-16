@@ -1,7 +1,7 @@
 # README
 
 ```
-apt -y install git screen
+apt -y install git screen vim
 screen
 rm -rf z10
 git clone https://github.com/zdocs/z10.git
