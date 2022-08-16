@@ -319,13 +319,15 @@ EOF
 
     mbs)
         sed -i 's|"$HOSTNAME"|"'${HOSTNAME}'"|g' "$mydir/10-MBS-Config"
-        sed -i 's|"admin@$DOMAIN"|"admin@'${DOMAIN}'"|g' "$mydir/10-MBS-Config"
+        sed -i 's|$HOSTNAME|"'${HOSTNAME}'"|g' "$mydir/10-MBS-Config"
         sed -i 's|"$DOMAIN"|"'${DOMAIN}'"|g' "$mydir/10-MBS-Config"
+        sed -i 's|$DOMAIN|"'${DOMAIN}'"|g' "$mydir/10-MBS-Config"
         sed -i 's|"$LDAPPASSWORD"|"'${LDAPPASSWORD}'"|g' "$mydir/10-MTAProxy-Config"
         sed -i 's|"$MYPASSWORD"|"'${MYPASSWORD}'"|g' "$mydir/10-MTAProxy-Config"
         sed -i 's|"$LDAPHOSTNAME"|"'${LDAPHOSTNAME}'"|g' "$mydir/10-MBS-Config"
         memory=$(($(grep MemAvailable /proc/meminfo | awk '{print $2}')/1024/1024))
         sed -i 's|"$MEMORY"|"'${memory}'"|g' "$mydir/10-MBS-Config"
+        sed -i 's|"$MYIP"|"'${MYIP}'"|g' "$mydir/10-MBS-Config"
         sed -i 's|$APACHE|'${APACHE}'|g' "$mydir/10-MBS-Answers"
         #LDAPSERVERID -- is this required???
         cat "$mydir/10-MBS-Config" >/tmp/zcs/zconfig
@@ -415,7 +417,6 @@ postInstallZimbra() {
 
     echo "Setting optimal security settings"
     rm -Rf /tmp/provfile
-    ZIMBRAIP=$(netstat -tulpn | grep slapd | awk '{print $4}' | awk -F ':' '{print $1}')
 
     cat >> /tmp/provfile << EOF
 mcf zimbraReverseProxySSLProtocols TLSv1.2
@@ -438,7 +439,7 @@ mcf zimbraLastLogonTimestampFrequency 1s
 mc default zimbraPrefShortEmailAddress FALSE
 
 mcf +zimbraMailTrustedIP 127.0.0.1
-mcf +zimbraMailTrustedIP $ZIMBRAIP
+mcf +zimbraMailTrustedIP $MYIP
 EOF
 
         cat >> /tmp/provfile.1 << EOF
