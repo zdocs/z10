@@ -351,10 +351,12 @@ EOF
 
 getLicense() {
     echo "Download the trial license ..."
-    wget -q --no-check-certificate --no-proxy -O /tmp/zcs/ZCSLicense.xml "https://license.zimbra.com/zimbraLicensePortal/public/STLicense?IssuedToName=MyCompany&IssuedToEmail=noone@$DOMAIN" 
-    if [ ! -s "/tmp/zcs/ZCSLicense.xml" ]; then
-        echo -e "${RED}License file could not be downloaded. Please check and re-run $(basename $0).${NC}"
-        exit 1
+    if [[ "$COMPONENT" == *"mbs"* || "$COMPONENT" == *"allinone"* ]]; then
+        wget -q --no-check-certificate --no-proxy -O /tmp/zcs/ZCSLicense.xml "https://license.zimbra.com/zimbraLicensePortal/public/STLicense?IssuedToName=MyCompany&IssuedToEmail=noone@$DOMAIN" 
+        if [ ! -s "/tmp/zcs/ZCSLicense.xml" ]; then
+            echo -e "${RED}License file could not be downloaded. Please check and re-run $(basename $0).${NC}"
+            exit 1
+        fi
     fi
     echo -e "${GREEN}... Done.${NC}"
 }
@@ -365,7 +367,11 @@ installZimbra () {
     LOGFILE="/tmp/zcs/install.log"
     echo "Installing the Zimbra binaries ..."
     echo -e "For more details, you can open a new terminal and run ${GREEN}tail -f $LOGFILE /tmp/install.log.*${NC}"
-    cd /tmp/zcs/zcs-NETWORK* && ./install.sh -x -l /tmp/zcs/ZCSLicense.xml -s < /tmp/zcs/zkeys >> $LOGFILE 2>&1
+    if [[ "$COMPONENT" == *"mbs"* || "$COMPONENT" == *"allinone"* ]]; then
+        cd /tmp/zcs/zcs-NETWORK* && ./install.sh -x -l /tmp/zcs/ZCSLicense.xml -s < /tmp/zcs/zkeys >> $LOGFILE 2>&1
+    else
+        cd /tmp/zcs/zcs-NETWORK* && ./install.sh -x -s < /tmp/zcs/zkeys >> $LOGFILE 2>&1
+    fi
     echo -e "${GREEN}... Done.${NC}"
     echo "Setting up your Zimbra configuration, this can take up to 20 minutes or slightly more."
     echo -e "For more details, you can open a new terminal and run ${GREEN}tail -f $LOGFILE /tmp/zmsetup.log${NC}"
