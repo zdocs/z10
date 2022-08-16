@@ -53,6 +53,10 @@ if [[ "$COMPONENT" != *"ldap"* ]]; then
 else
    echo
    echo "LDAP installed. Install the mailbox and mta servers."
+   echo "Zimbra installation details:"
+   echo "  - LDAP Hostname: ${HOSTNAME}"
+   echo "  - LDAP Internal: ${MYIP}"
+   echo "  - LDAP Password: ${MYPASSWORD}"
    printf '%s\n' "Example: $(basename $0) -c \"mbs ldap_ip ldap_host ldap_pass\" -n email -l y myorg.com\n"
    echo
 fi

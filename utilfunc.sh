@@ -114,7 +114,7 @@ installDNS() {
 fixFirewall() {
     # Update firewall
     echo "Enabling firewall for Zimbra ports ..."
-    echo "Ports ${GREEN}22/25/143/80/443/995/993/9071${NC} will be opened to the internet."
+    echo -e "Ports ${GREEN}22/25/143/80/443/995/993/9071${NC} will be opened to the internet."
     echo "Please check your iptables for more info."
 
     #flushing iptables while having INPUT=DROP policy will terminate ssh connection
@@ -369,7 +369,7 @@ installZimbra () {
     echo "Setting up your Zimbra configuration, this can take up to 20 minutes or slightly more."
     echo -e "For more details, you can open a new terminal and run ${GREEN}tail -f $LOGFILE /tmp/zmsetup.log${NC}"
     /opt/zimbra/libexec/zmsetup.pl -c /tmp/zcs/zconfig >> $LOGFILE 2>&1
-    echo "Allow mailbox service to re-start completely ..."
+    echo "Allow services to re-start completely ..."
     for i in {15..0}; do echo -ne "${RED}$i${NC}\033[0K\r"; sleep 1; done; echo
     if [[ "$COMPONENT" == *"mbs"* || "$COMPONENT" == *"allinone"* ]]; then
         echo "Activating license ..."
@@ -441,11 +441,13 @@ EOF
     sed -i 's/-server -Dhttps.protocols=TLSv1.2 -Djdk.tls.client.protocols=TLSv1.2/-server -Dhttps.protocols=TLSv1.2,TLSv1.3 -Djdk.tls.client.protocols=TLSv1.2,TLSv1.3/g' /opt/zimbra/conf/localconfig.xml
     wget https://raw.githubusercontent.com/internetstandards/dhe_groups/master/ffdhe4096.pem -O /etc/ffdhe4096.pem
 
-    su - zimbra -c '/opt/zimbra/bin/postconf -e fast_flush_domains=""'
-    su - zimbra -c '/opt/zimbra/bin/postconf -e smtpd_etrn_restrictions=reject'
-    su - zimbra -c '/opt/zimbra/bin/postconf -e disable_vrfy_command=yes'
-    su - zimbra -c '/opt/zimbra/bin/postconf -e tls_medium_cipherlist="ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"'
-    su - zimbra -c '/opt/zimbra/bin/postconf -e tls_preempt_cipherlist=no'
+    if [[ "$COMPONENT" == *"mtaproxy"* || "$COMPONENT" == *"allinone"* ]]; then
+        su - zimbra -c '/opt/zimbra/bin/postconf -e fast_flush_domains=""'
+        su - zimbra -c '/opt/zimbra/bin/postconf -e smtpd_etrn_restrictions=reject'
+        su - zimbra -c '/opt/zimbra/bin/postconf -e disable_vrfy_command=yes'
+        su - zimbra -c '/opt/zimbra/bin/postconf -e tls_medium_cipherlist="ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"'
+        su - zimbra -c '/opt/zimbra/bin/postconf -e tls_preempt_cipherlist=no'
+    fi
 
     su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e ldap_common_tlsprotocolmin="3.3"'
     su - zimbra -c '/opt/zimbra/bin/zmlocalconfig -e ldap_common_tlsciphersuite="HIGH"'
