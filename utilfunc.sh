@@ -41,52 +41,52 @@ updateSystemPackages() {
     DEBIAN_FRONTEND=noninteractive apt-get install -qq -y dnsmasq lsb-release net-tools netfilter-persistent dnsutils iptables sed wget rsyslog ldapscripts < /dev/null > /dev/null
 
     echo "Disabling some of the non-essential services for Zimbra ..."
-    systemctl stop postfix
-    systemctl -q disable postfix
-    systemctl mask postfix
+    systemctl stop postfix > /dev/null
+    systemctl -q disable postfix > /dev/null
+    systemctl mask postfix > /dev/null
 
-    systemctl stop iptables
-    systemctl -q disable iptables
-    systemctl mask iptables
+    systemctl stop iptables > /dev/null
+    systemctl -q disable iptables > /dev/null
+    systemctl mask iptables > /dev/null
 
-    systemctl stop httpd
-    systemctl -q disable httpd
-    systemctl mask httpd
+    systemctl stop httpd > /dev/null
+    systemctl -q disable httpd > /dev/null
+    systemctl mask httpd > /dev/null
 
-    systemctl stop exim
-    systemctl -q disable exim
-    systemctl mask exim
+    systemctl stop exim > /dev/null
+    systemctl -q disable exim > /dev/null
+    systemctl mask exim > /dev/null
 
-    systemctl stop named
-    systemctl -q disable named
-    systemctl mask named
+    systemctl stop named > /dev/null
+    systemctl -q disable named > /dev/null
+    systemctl mask named > /dev/null
 
-    systemctl stop apache2
-    systemctl -q disable apache2
-    systemctl mask apache2
+    systemctl stop apache2 > /dev/null
+    systemctl -q disable apache2 > /dev/null
+    systemctl mask apache2 > /dev/null
 
-    systemctl stop sendmail
-    systemctl -q disable sendmail
-    systemctl mask sendmail
+    systemctl stop sendmail > /dev/null
+    systemctl -q disable sendmail > /dev/null
+    systemctl mask sendmail > /dev/null
 
-    systemctl stop mysqld
-    systemctl -q disable mysqld
-    systemctl mask mysqld
+    systemctl stop mysqld > /dev/null
+    systemctl -q disable mysqld > /dev/null
+    systemctl mask mysqld > /dev/null
 
-    systemctl stop mariadb
-    systemctl -q disable mariadb
-    systemctl mask mariadb
+    systemctl stop mariadb > /dev/null
+    systemctl -q disable mariadb > /dev/null
+    systemctl mask mariadb > /dev/null
 
-    systemctl stop systemd-resolved
-    systemctl -q disable systemd-resolved
-    systemctl mask systemd-resolved
+    systemctl stop systemd-resolved > /dev/null
+    systemctl -q disable systemd-resolved > /dev/null
+    systemctl mask systemd-resolved > /dev/null
 
-    systemctl stop ufw
-    systemctl -q disable ufw
-    systemctl mask ufw
+    systemctl stop ufw > /dev/null
+    systemctl -q disable ufw > /dev/null
+    systemctl mask ufw > /dev/null
     
-    systemctl enable rsyslog.service
-    systemctl restart rsyslog.service
+    systemctl enable rsyslog.service > /dev/null
+    systemctl restart rsyslog.service > /dev/null
 }
 
 installDNS() {
