@@ -14,7 +14,7 @@ configVariables() {
         LDAPIP=${cIN[1]}
         LDAPHOSTNAME=${cIN[2]}
         LDAPPASSWORD=${cIN[3]}
-        LDAPSEARCH=$(ldapsearch -x -LLL -h $LDAPIP -D "uid=zimbra,cn=admins,cn=zimbra" -w $LDAPPASSWORD "(uid=admin)" dn)
+        LDAPSEARCH=$(ldapsearch -x -LLL -h $LDAPIP -D "uid=zimbra,cn=admins,cn=zimbra" -w $LDAPPASSWORD uid=admin dn)
         if [[ $$LDAPSEARCH != *"uid=admin"* ]]; then
             echo -e "${RED} Cannot connect to the ldap server .. Check firewall and your credentials!!${NC}"
             exit 1
@@ -41,52 +41,52 @@ updateSystemPackages() {
     DEBIAN_FRONTEND=noninteractive apt-get install -qq -y dnsmasq lsb-release net-tools netfilter-persistent dnsutils iptables sed wget rsyslog ldapscripts < /dev/null > /dev/null
 
     echo "Disabling some of the non-essential services for Zimbra ..."
-    systemctl stop postfix > /dev/null
-    systemctl -q disable postfix > /dev/null
-    systemctl mask postfix > /dev/null
+    systemctl stop postfix 
+    systemctl -q disable postfix 
+    systemctl mask postfix 
 
-    systemctl stop iptables > /dev/null
-    systemctl -q disable iptables > /dev/null
-    systemctl mask iptables > /dev/null
+    systemctl stop iptables 
+    systemctl -q disable iptables 
+    systemctl mask iptables 
 
-    systemctl stop httpd > /dev/null
-    systemctl -q disable httpd > /dev/null
-    systemctl mask httpd > /dev/null
+    systemctl stop httpd 
+    systemctl -q disable httpd 
+    systemctl mask httpd 
 
-    systemctl stop exim > /dev/null
-    systemctl -q disable exim > /dev/null
-    systemctl mask exim > /dev/null
+    systemctl stop exim 
+    systemctl -q disable exim 
+    systemctl mask exim 
 
-    systemctl stop named > /dev/null
-    systemctl -q disable named > /dev/null
-    systemctl mask named > /dev/null
+    systemctl stop named 
+    systemctl -q disable named
+    systemctl mask named 
 
-    systemctl stop apache2 > /dev/null
-    systemctl -q disable apache2 > /dev/null
-    systemctl mask apache2 > /dev/null
+    systemctl stop apache2 
+    systemctl -q disable apache2 
+    systemctl mask apache2 
 
-    systemctl stop sendmail > /dev/null
-    systemctl -q disable sendmail > /dev/null
-    systemctl mask sendmail > /dev/null
+    systemctl stop sendmail 
+    systemctl -q disable sendmail 
+    systemctl mask sendmail
 
-    systemctl stop mysqld > /dev/null
-    systemctl -q disable mysqld > /dev/null
-    systemctl mask mysqld > /dev/null
+    systemctl stop mysqld
+    systemctl -q disable mysqld 
+    systemctl mask mysqld 
 
-    systemctl stop mariadb > /dev/null
-    systemctl -q disable mariadb > /dev/null
-    systemctl mask mariadb > /dev/null
+    systemctl stop mariadb 
+    systemctl -q disable mariadb 
+    systemctl mask mariadb 
 
-    systemctl stop systemd-resolved > /dev/null
-    systemctl -q disable systemd-resolved > /dev/null
-    systemctl mask systemd-resolved > /dev/null
+    systemctl stop systemd-resolved 
+    systemctl -q disable systemd-resolved 
+    systemctl mask systemd-resolved 
 
-    systemctl stop ufw > /dev/null
-    systemctl -q disable ufw > /dev/null
-    systemctl mask ufw > /dev/null
+    systemctl stop ufw 
+    systemctl -q disable ufw
+    systemctl mask ufw
     
-    systemctl enable rsyslog.service > /dev/null
-    systemctl restart rsyslog.service > /dev/null
+    systemctl enable rsyslog.service
+    systemctl restart rsyslog.service
 }
 
 installDNS() {
